@@ -5,7 +5,9 @@ services:
       context: .
       dockerfile: Dockerfile.api
     working_dir: /app
-    env_file: [.env]
+    env_file:
+      - .env 
+      - .secrets.env
     environment:
       DB_PATH: /data/sentinel.db
       LOG_PATH: /logs/sentinel.log
