@@ -253,6 +253,7 @@ async def alerts(
     min_premium: Optional[float] = None,
     dte_min: Optional[int] = None,
     dte_max: Optional[int] = None,
+    sort_score: Optional[str] = None,
     user=Depends(require_user)
 ):
     limit = max(1, min(int(limit), 500))
@@ -282,7 +283,12 @@ async def alerts(
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
 
-    query += " ORDER BY id DESC LIMIT ?"
+    if sort_score and sort_score.lower() == "desc":
+        query += " ORDER BY score_total DESC LIMIT ?"
+    elif sort_score and sort_score.lower() == "asc":
+        query += " ORDER BY score_total ASC LIMIT ?"
+    else:
+        query += " ORDER BY id DESC LIMIT ?"
     params.append(limit)
 
     with db() as conn:

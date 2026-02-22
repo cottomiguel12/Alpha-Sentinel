@@ -3,6 +3,7 @@
 const API_BASE = '/api';
 
 let currentTypeFilter = '';
+let currentSortScore = ''; // '', 'desc', or 'asc'
 
 // Utilities
 function getToken() {
@@ -91,6 +92,7 @@ async function loadAlerts(isBackground = false) {
         const symbolInput = document.getElementById('filter-symbol');
         if (symbolInput && symbolInput.value) urlParams.append('symbol', symbolInput.value);
         if (currentTypeFilter) urlParams.append('type', currentTypeFilter);
+        if (currentSortScore) urlParams.append('sort_score', currentSortScore);
 
         const data = await fetchApi(`/alerts?${urlParams.toString()}`);
         if (!data || !data.items) {
@@ -352,6 +354,38 @@ document.addEventListener('DOMContentLoaded', () => {
             loadAlerts(false);
         });
     });
+
+    const thScore = document.getElementById('th-score');
+    if (thScore) {
+        thScore.addEventListener('click', () => {
+            if (currentSortScore === '') {
+                currentSortScore = 'desc';
+            } else if (currentSortScore === 'desc') {
+                currentSortScore = 'asc';
+            } else {
+                currentSortScore = '';
+            }
+
+            const icon = document.getElementById('sort-icon-score');
+            if (icon) {
+                if (currentSortScore === 'desc') {
+                    icon.textContent = 'arrow_downward';
+                    icon.classList.remove('opacity-0', 'group-hover:opacity-50');
+                    icon.classList.add('opacity-100', 'text-primary');
+                } else if (currentSortScore === 'asc') {
+                    icon.textContent = 'arrow_upward';
+                    icon.classList.remove('opacity-0', 'group-hover:opacity-50');
+                    icon.classList.add('opacity-100', 'text-primary');
+                } else {
+                    icon.textContent = 'swap_vert';
+                    icon.classList.remove('opacity-100', 'text-primary');
+                    icon.classList.add('opacity-0', 'group-hover:opacity-50');
+                }
+            }
+
+            loadAlerts(false);
+        });
+    }
 
     // Initial Load
     updateHealth();
