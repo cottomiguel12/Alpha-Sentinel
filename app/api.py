@@ -180,61 +180,38 @@ async def login(body: LoginIn):
 # ----------------------------
 # Alerts (dashboard priority)
 # ----------------------------
-@APP.get("/alerts")
-async def alerts(limit: int = 50, user=Depends(require_user)):
-    limit = max(1, min(int(limit), 500))
+def _format_alerts(rows, conn):
+    cks = []
+    for r in rows:
+        d = dict(r)
+        exp = (d.get("exp") or "").strip()
+        if exp:
+            exp = exp.split("T")[0].split(" ")[0]
+        ot = (d.get("opt_type") or "").strip().upper()
+        ot = "C" if ot.startswith("C") else "P" if ot.startswith("P") else ot
+        strike = d.get("strike")
+        try:
+            strike = float(strike) if strike is not None else None
+        except Exception:
+            strike = None
 
-    with db() as conn:
-        rows = conn.execute(
-            """
-            SELECT *
-            FROM alerts
-            ORDER BY id DESC
-            LIMIT ?
-            """,
-            (limit,),
+        if d.get("ticker") and exp and strike is not None and ot:
+            ck = _make_contract_key(d["ticker"], exp, strike, ot)
+            cks.append(ck)
+
+    active = set()
+    if cks:
+        qmarks = ",".join(["?"] * len(cks))
+        active_rows = conn.execute(
+            f"SELECT contract_key FROM watchlist WHERE is_active=1 AND contract_key IN ({qmarks})",
+            tuple(cks),
         ).fetchall()
-
-        # Build normalized contract_keys for these alerts
-        cks = []
-        for r in rows:
-            d = dict(r)
-
-            # normalize exp
-            exp = (d.get("exp") or "").strip()
-            if exp:
-                exp = exp.split("T")[0].split(" ")[0]
-
-            # normalize opt_type
-            ot = (d.get("opt_type") or "").strip().upper()
-            ot = "C" if ot.startswith("C") else "P" if ot.startswith("P") else ot
-
-            # normalize strike
-            strike = d.get("strike")
-            try:
-                strike = float(strike) if strike is not None else None
-            except Exception:
-                strike = None
-
-            # compute contract_key (even if alerts table doesn't store it)
-            if d.get("ticker") and exp and strike is not None and ot:
-                ck = _make_contract_key(d["ticker"], exp, strike, ot)
-                cks.append(ck)
-
-        active = set()
-        if cks:
-            qmarks = ",".join(["?"] * len(cks))
-            active_rows = conn.execute(
-                f"SELECT contract_key FROM watchlist WHERE is_active=1 AND contract_key IN ({qmarks})",
-                tuple(cks),
-            ).fetchall()
-            active = {r["contract_key"] for r in active_rows}
+        active = {r["contract_key"] for r in active_rows}
 
     items = []
     for r in rows:
         d = dict(r)
-
-        # normalize + add contract_key
+        
         exp = (d.get("exp") or "").strip()
         if exp:
             exp = exp.split("T")[0].split(" ")[0]
@@ -253,12 +230,10 @@ async def alerts(limit: int = 50, user=Depends(require_user)):
         if d.get("ticker") and d.get("exp") and d.get("strike") is not None and d.get("opt_type"):
             d["contract_key"] = _make_contract_key(d["ticker"], d["exp"], float(d["strike"]), d["opt_type"])
         else:
-            d["contract_key"] = d.get("contract_key")  # fallback if your schema has it sometimes
+            d["contract_key"] = d.get("contract_key")
 
-        # is this alert currently in watchlist?
         d["is_aoi"] = 1 if d.get("contract_key") in active else 0
 
-        # normalize JSON-ish strings
         for k in ("reason_codes",):
             if k in d and isinstance(d[k], str):
                 try:
@@ -267,6 +242,72 @@ async def alerts(limit: int = 50, user=Depends(require_user)):
                     pass
 
         items.append(d)
+    return items
+
+@APP.get("/alerts")
+async def alerts(
+    limit: int = 50,
+    symbol: Optional[str] = None,
+    type: Optional[str] = None,
+    min_premium: Optional[float] = None,
+    dte_min: Optional[int] = None,
+    dte_max: Optional[int] = None,
+    user=Depends(require_user)
+):
+    limit = max(1, min(int(limit), 500))
+
+    query = "SELECT * FROM alerts"
+    conditions = []
+    params = []
+
+    if symbol:
+        conditions.append("ticker = ?")
+        params.append(symbol.strip().upper())
+    if type:
+        ot = type.strip().upper()
+        ot = "C" if ot.startswith("C") else "P" if ot.startswith("P") else ot
+        conditions.append("opt_type = ?")
+        params.append(ot)
+    if min_premium is not None:
+        conditions.append("premium >= ?")
+        params.append(min_premium)
+    if dte_min is not None:
+        conditions.append("dte >= ?")
+        params.append(dte_min)
+    if dte_max is not None:
+        conditions.append("dte <= ?")
+        params.append(dte_max)
+
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+
+    query += " ORDER BY id DESC LIMIT ?"
+    params.append(limit)
+
+    with db() as conn:
+        rows = conn.execute(query, tuple(params)).fetchall()
+        items = _format_alerts(rows, conn)
+
+    return {"ok": True, "items": items}
+
+@APP.get("/alerts/recent")
+async def alerts_recent(window_sec: int = 900, limit: int = 15, user=Depends(require_user)):
+    limit = max(1, min(int(limit), 100))
+    cutoff_dt = datetime.now(timezone.utc) - timedelta(seconds=window_sec)
+    cutoff_iso = cutoff_dt.isoformat()
+
+    with db() as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM alerts
+            WHERE ts >= ?
+            ORDER BY score_total DESC
+            LIMIT ?
+            """,
+            (cutoff_iso, limit),
+        ).fetchall()
+        items = _format_alerts(rows, conn)
 
     return {"ok": True, "items": items}
 
@@ -274,6 +315,7 @@ async def alerts(limit: int = 50, user=Depends(require_user)):
 # ----------------------------
 # Monitor (top 10)
 # ----------------------------
+@APP.get("/monitors")
 @APP.get("/monitor")
 async def monitor(user=Depends(require_user)):
     with db() as conn:
