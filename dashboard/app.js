@@ -141,12 +141,27 @@ async function loadMonitors(isBackground = false) {
     if (!window.location.pathname.includes('monitor.html')) return;
 
     if (!isBackground) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-slate-400">Loading monitors...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-slate-400">Loading monitors...</td></tr>';
     }
 
     const data = await fetchApi('/monitors');
     if (!data || !data.items) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-rose-400">Failed to load monitors</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-rose-400">Failed to load monitors</td></tr>';
+        return;
+    }
+
+    if (data.items.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" class="text-center py-12">
+                    <div class="flex flex-col items-center justify-center">
+                        <span class="material-symbols-outlined text-4xl text-slate-600 mb-3 opacity-50">monitoring</span>
+                        <p class="text-slate-400 font-medium tracking-wide">No contracts are currently being monitored.</p>
+                        <p class="text-xs text-slate-500 mt-2">Star a contract on the Alerts page to track it here in real-time.</p>
+                    </div>
+                </td>
+            </tr>
+        `;
         return;
     }
 
