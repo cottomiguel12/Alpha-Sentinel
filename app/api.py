@@ -434,8 +434,13 @@ async def add_aoi_from_alert(alert_id: int, notes: Optional[str] = None, user=De
 async def toggle_watchlist(body: ToggleIn, user=Depends(require_user)):
     with db() as conn:
         conn.execute(
-            "UPDATE watchlist SET is_active=? WHERE contract_key=?",
-            (int(body.is_active), body.contract_key),
+            """
+            INSERT INTO watchlist (contract_key, added_by, created_at, is_active, notes)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(contract_key) DO UPDATE SET
+              is_active=?
+            """,
+            (body.contract_key, user["email"], now_iso(), int(body.is_active), "", int(body.is_active)),
         )
     return {"ok": True, "contract_key": body.contract_key, "is_active": int(body.is_active)}
 
