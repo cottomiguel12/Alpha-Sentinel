@@ -1,208 +1,674 @@
 <!DOCTYPE html>
-
 <html class="dark" lang="en">
 
 <head>
     <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Alpha Sentinel - Monitor Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Alpha Sentinel – Monitor tracked contracts in real-time" />
+    <title>Alpha Sentinel – Monitor</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
-        rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
-    <script id="tailwind-config">
+    <script>
         tailwind.config = {
-            darkMode: "class",
+            darkMode: 'class',
             theme: {
                 extend: {
-                    colors: {
-                        "primary": "#3c83f6",
-                        "background-light": "#f5f7f8",
-                        "background-dark": "#101722",
-                        "charcoal": "#121212",
-                        "card-dark": "#1b2330",
-                        "border-dark": "#282e39"
-                    },
-                    fontFamily: {
-                        "display": ["Inter", "sans-serif"]
-                    },
-                    borderRadius: {
-                        "DEFAULT": "0.25rem",
-                        "lg": "0.5rem",
-                        "xl": "0.75rem",
-                        "full": "9999px"
-                    },
-                },
-            },
-        }
+                    colors: { primary: '#3c83f6', 'bg-dark': '#0d1117' },
+                    fontFamily: { display: ['Inter', 'sans-serif'] }
+                }
+            }
+        };
     </script>
+    <!-- Shared CSS with index.html (inlined for simplicity) -->
     <style>
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        :root {
+            --primary: #3c83f6;
+            --bg: #0d1117;
+            --surface: #161b22;
+            --surface2: #1f2937;
+            --border: #2d3748;
+            --text: #e2e8f0;
+            --muted: #64748b;
+            --header-h: 52px;
+            --nav-h: 56px;
         }
 
-        .tabular-nums {
-            font-variant-numeric: tabular-nums;
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        html {
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100dvh;
+            overflow-x: hidden;
+        }
+
+        /* ── Header ───────────────────────────────────── */
+        .site-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            height: var(--header-h);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-brand .logo-icon {
+            width: 28px;
+            height: 28px;
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .header-brand .brand-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -0.01em;
+        }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, .25);
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0.4
+            }
+        }
+
+        .btn-logout-compact {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            min-height: 32px;
+            transition: color .15s, background .15s;
+        }
+
+        .btn-logout-compact:hover {
+            color: #f87171;
+            background: rgba(248, 113, 113, .08);
+        }
+
+        .btn-logout-compact .material-symbols-outlined {
+            font-size: 16px;
+        }
+
+        .btn-logout-compact .logout-label {
+            display: none;
+        }
+
+        @media (min-width: 360px) {
+            .btn-logout-compact .logout-label {
+                display: inline;
+            }
+        }
+
+        .user-pill {
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .user-pill {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 12px;
+                color: var(--muted);
+            }
+        }
+
+        /* ── Tab nav ──────────────────────────────────── */
+        .tab-nav {
+            display: none;
+        }
+
+        @media (min-width: 431px) {
+            .tab-nav {
+                display: flex;
+                border-bottom: 1px solid var(--border);
+                padding: 0 16px;
+                background: var(--bg);
+            }
+
+            .tab-nav a {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 10px 16px;
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--muted);
+                border-bottom: 2px solid transparent;
+                transition: color .15s, border-color .15s;
+                text-decoration: none;
+            }
+
+            .tab-nav a.active,
+            .tab-nav a:hover {
+                color: #fff;
+            }
+
+            .tab-nav a.active {
+                border-bottom-color: var(--primary);
+            }
+
+            .tab-nav a .material-symbols-outlined {
+                font-size: 18px;
+            }
+        }
+
+        /* ── Bottom nav ───────────────────────────────── */
+        .bottom-nav {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            height: var(--nav-h);
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+        }
+
+        .bottom-nav a {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--muted);
+            transition: color .15s;
+        }
+
+        .bottom-nav a.active {
+            color: var(--primary);
+        }
+
+        .bottom-nav a .material-symbols-outlined {
+            font-size: 22px;
+        }
+
+        @media (min-width: 431px) {
+            .bottom-nav {
+                display: none;
+            }
+        }
+
+        /* ── Page content ─────────────────────────────── */
+        .page-content {
+            max-width: 1440px;
+            margin: 0 auto;
+            width: 100%;
+            padding-bottom: calc(var(--nav-h) + 8px);
+        }
+
+        @media (min-width: 431px) {
+            .page-content {
+                padding-bottom: 32px;
+            }
+        }
+
+        /* Status ribbon */
+        .status-ribbon {
+            display: grid;
+            gap: 8px;
+            grid-template-columns: repeat(4, 1fr);
+            padding: 12px 16px;
+        }
+
+        @media (min-width: 640px) {
+            .status-ribbon {
+                grid-template-columns: repeat(7, 1fr);
+            }
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 10px;
+        }
+
+        .stat-card .sc-label {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .stat-card .sc-val {
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        /* Section header */
+        .section-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            padding: 16px 16px 10px;
+        }
+
+        .section-header h1 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        @media (min-width: 768px) {
+            .section-header h1 {
+                font-size: 20px;
+            }
+        }
+
+        .section-header p {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .section-header .refresh-hint {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        /* ── Monitor cards (mobile ≤ 430px) ──────────── */
+        #monitor-cards {
+            padding: 0 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        @media (min-width: 431px) {
+            #monitor-cards {
+                display: none;
+            }
+        }
+
+        .monitor-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .monitor-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .monitor-ticker {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .monitor-contract {
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .monitor-scores {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+        }
+
+        .monitor-card-footer {
+            border-top: 1px solid var(--border);
+            padding-top: 6px;
+        }
+
+        /* ── Monitor table (desktop ≥ 431px) ─────────── */
+        .monitor-table-wrap {
+            display: none;
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            margin: 0 16px;
+        }
+
+        @media (min-width: 431px) {
+            .monitor-table-wrap {
+                display: block;
+            }
+        }
+
+        .monitor-table-wrap table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .monitor-table-wrap thead tr {
+            background: rgba(31, 41, 55, .7);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .monitor-table-wrap th {
+            padding: 10px 20px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+
+        .tbl-row {
+            transition: background .1s;
+        }
+
+        .tbl-row:hover {
+            background: rgba(255, 255, 255, .03);
+        }
+
+        /* ── Shared ───────────────────────────────────── */
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 7px;
+            border-radius: 100px;
+            border: 1px solid transparent;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            letter-spacing: 0.02em;
+        }
+
+        .chip-green {
+            background: rgba(16, 185, 129, .15);
+            border-color: rgba(16, 185, 129, .3);
+            color: #34d399;
+        }
+
+        .chip-yellow {
+            background: rgba(245, 158, 11, .12);
+            border-color: rgba(245, 158, 11, .3);
+            color: #fbbf24;
+        }
+
+        .chip-neutral {
+            background: var(--surface2);
+            border-color: var(--border);
+            color: #94a3b8;
+        }
+
+        .chip-blue {
+            background: rgba(60, 131, 246, .15);
+            border-color: rgba(60, 131, 246, .3);
+            color: var(--primary);
+        }
+
+        .stat-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-val {
+            font-size: 13px;
+            font-weight: 600;
+            color: #cbd5e1;
+        }
+
+        .ticker-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            flex-shrink: 0;
+            background: rgba(60, 131, 246, .12);
+            border: 1px solid rgba(60, 131, 246, .2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .btn-remove {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            min-width: 32px;
+            min-height: 32px;
+            justify-content: center;
+            transition: color .15s;
+        }
+
+        .btn-remove:hover {
+            color: #f87171;
+        }
+
+        .sparkline-mini {
+            width: 64px;
+            height: 24px;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--muted);
+            font-size: 13px;
+            padding: 40px 16px;
+        }
+
+        .empty-state-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 48px 16px;
+            color: var(--muted);
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
         }
     </style>
 </head>
 
-<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
-    <div class="flex flex-col min-h-screen">
-        <!-- Top Navigation -->
-        <header class="border-b border-border-dark bg-background-dark/80 backdrop-blur-md sticky top-0 z-50">
-            <div class="max-w-[1440px] mx-auto px-6 h-16 flex items-center justify-between">
-                <div class="flex items-center gap-6">
-                    <div class="flex items-center gap-2 text-primary">
-                        <span class="material-symbols-outlined text-3xl">shield_with_heart</span>
-                        <span class="text-xl font-bold tracking-tight text-white">Alpha Sentinel</span>
-                    </div>
-                    <div class="h-6 w-px bg-border-dark"></div>
-                    <div class="flex items-center gap-2">
-                        <span class="relative flex h-2 w-2">
-                            <span
-                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                        </span>
-                        <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Market: Open</span>
-                    </div>
-                </div>
-                <div class="flex items-center gap-6">
-                    <div class="flex items-center gap-3">
-                        <span class="text-sm text-slate-400">user@alphasentinel.io</span>
-                        <span
-                            class="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded border border-primary/20 uppercase tracking-widest">Admin</span>
-                    </div>
-                    <div class="h-6 w-px bg-border-dark"></div>
-                    <button
-                        class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-border-dark hover:bg-red-500/10 hover:text-red-500 transition-all text-sm font-medium">
-                        <span class="material-symbols-outlined text-lg">logout</span>
-                        <span id="logout-btn">Logout</span>
-                    </button>
-                    <div
-                        class="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30">
-                        <span class="material-symbols-outlined text-primary text-xl">person</span>
-                    </div>
-                </div>
+<body>
+
+    <!-- ── Sticky Header ────────────────────────────────────────── -->
+    <header class="site-header">
+        <div class="header-brand">
+            <svg class="logo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M36.7273 44C33.9891 44 31.6043 39.8386 30.3636 33.69C29.123 39.8386 26.7382 44 24 44
+                 C21.2618 44 18.877 39.8386 17.6364 33.69C16.3957 39.8386 14.0109 44 11.2727 44
+                 C7.25611 44 4 35.0457 4 24C4 12.9543 7.25611 4 11.2727 4C14.0109 4 16.3957 8.16144
+                 17.6364 14.31C18.877 8.16144 21.2618 4 24 4C26.7382 4 29.123 8.16144 30.3636 14.31
+                 C31.6043 8.16144 33.9891 4 36.7273 4C40.7439 4 44 12.9543 44 24C44 35.0457 40.7439 44 36.7273 44Z"
+                    fill="currentColor" />
+            </svg>
+            <span class="brand-name">Alpha Sentinel</span>
+            <div class="header-status" style="margin-left:4px">
+                <span class="status-dot pulse"></span>
+                <span id="health-ts" style="font-size:9px;margin-left:4px"></span>
             </div>
-        </header>
-        <main class="flex-1 max-w-[1440px] mx-auto w-full px-6 py-8">
-            <!-- Status Overview Ribbon -->
-            <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
-                <div class="bg-card-dark border border-border-dark p-4 rounded-xl">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Agent Status</p>
-                    <div class="flex items-center justify-between">
-                        <p class="text-lg font-bold text-emerald-500">Active</p>
-                        <span class="material-symbols-outlined text-emerald-500/30">bolt</span>
-                    </div>
-                </div>
-                <div class="bg-card-dark border border-border-dark p-4 rounded-xl">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">WebSocket</p>
-                    <div class="flex items-center justify-between">
-                        <p class="text-lg font-bold text-primary">Connected</p>
-                        <span class="material-symbols-outlined text-primary/30">sync_alt</span>
-                    </div>
-                </div>
-                <div class="bg-card-dark border border-border-dark p-4 rounded-xl">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Last Event</p>
-                    <div class="flex items-center justify-between">
-                        <p class="text-lg font-bold text-white">2s ago</p>
-                        <span class="material-symbols-outlined text-slate-500/30">schedule</span>
-                    </div>
-                </div>
-                <div class="bg-card-dark border border-border-dark p-4 rounded-xl">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Last Alert</p>
-                    <div class="flex items-center justify-between">
-                        <p class="text-lg font-bold text-white tabular-nums">5m ago</p>
-                        <span class="material-symbols-outlined text-slate-500/30">notification_important</span>
-                    </div>
-                </div>
-                <div class="bg-card-dark border border-border-dark p-4 rounded-xl">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Events/min</p>
-                    <div class="flex items-center justify-between">
-                        <p class="text-lg font-bold text-white tabular-nums">142</p>
-                        <span class="material-symbols-outlined text-slate-500/30">analytics</span>
-                    </div>
-                </div>
-                <div class="bg-card-dark border border-border-dark p-4 rounded-xl">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Alerts/min</p>
-                    <div class="flex items-center justify-between">
-                        <p class="text-lg font-bold text-white tabular-nums">4</p>
-                        <span class="material-symbols-outlined text-slate-500/30">warning</span>
-                    </div>
-                </div>
-                <div class="bg-card-dark border border-border-dark p-4 rounded-xl">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Errors</p>
-                    <div class="flex items-center justify-between">
-                        <p class="text-lg font-bold text-slate-500 tabular-nums">0</p>
-                        <span class="material-symbols-outlined text-slate-500/30">error</span>
-                    </div>
-                </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+            <div class="user-pill">
+                <span class="user-email" style="font-size:12px;color:#94a3b8"></span>
+                <span class="chip chip-blue user-role" style="font-size:9px"></span>
             </div>
-            <!-- Tab Navigation -->
-            <div class="flex border-b border-border-dark mb-8">
-                <a href="/"
-                    class="px-8 py-4 text-sm font-semibold text-slate-400 hover:text-white transition-colors relative">
-                    Alerts
-                </a>
-                <a href="/monitor.html"
-                    class="px-8 py-4 text-sm font-bold text-white relative flex flex-col items-center">
-                    Monitor
-                    <div class="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></div>
-                </a>
+            <button class="btn-logout-compact logout-btn">
+                <span class="material-symbols-outlined">logout</span>
+                <span class="logout-label">Logout</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- ── Tab nav (≥ 431px) ────────────────────────────────────── -->
+    <nav class="tab-nav" aria-label="Main navigation">
+        <a href="/" id="nav-alerts">
+            <span class="material-symbols-outlined">notifications_active</span>Alerts
+        </a>
+        <a href="/monitor.html" class="active" id="nav-monitors">
+            <span class="material-symbols-outlined">monitoring</span>Monitor
+        </a>
+    </nav>
+
+    <div class="page-content">
+        <!-- Status ribbon -->
+        <div class="status-ribbon">
+            <div class="stat-card"><span class="sc-label">Agent</span><span class="sc-val"
+                    style="color:#34d399">Active</span></div>
+            <div class="stat-card"><span class="sc-label">Feed</span><span class="sc-val"
+                    style="color:#3c83f6">Live</span></div>
+            <div class="stat-card"><span class="sc-label">Contracts</span><span class="sc-val"
+                    id="monitor-count">—</span></div>
+            <div class="stat-card"><span class="sc-label">Last Update</span><span class="sc-val">—</span></div>
+        </div>
+
+        <!-- Section heading -->
+        <div class="section-header">
+            <div>
+                <h1>Active Monitor</h1>
+                <p>Tracked contracts — auto-refreshes every 5s</p>
             </div>
-            <!-- Monitor View Content -->
-            <div class="space-y-6">
-                <div class="flex items-end justify-between">
-                    <div>
-                        <h1 class="text-2xl font-bold text-white">Monitor (Top 10 Active Contracts)</h1>
-                        <p class="text-slate-400 text-sm">Shared tracked contracts – updates every 10–15 seconds</p>
-                    </div>
-                    <div class="flex items-center gap-2 text-xs text-slate-500">
-                        <span class="material-symbols-outlined text-sm animate-spin">refresh</span>
-                        <span>Auto-refreshing in 8s</span>
-                    </div>
-                </div>
-                <div class="bg-card-dark border border-border-dark rounded-xl overflow-hidden">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr
-                                class="bg-background-dark/50 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border-dark">
-                                <th class="px-6 py-4">Contract</th>
-                                <th class="px-6 py-4">Entry Score</th>
-                                <th class="px-6 py-4">Current Score</th>
-                                <th class="px-6 py-4">Peak Score</th>
-                                <th class="px-6 py-4">Δ from Peak</th>
-                                <th class="px-6 py-4">Trend</th>
-                                <th class="px-6 py-4">Status</th>
-                                <th class="px-6 py-4">Last Update</th>
-                                <th class="px-6 py-4 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="monitor-tbody" class="divide-y divide-border-dark/50">
-                            <!-- Javascript will dynamically inject monitored contracts here -->
-                        </tbody>
-                    </table>
-                </div>
+            <div class="refresh-hint">
+                <span class="material-symbols-outlined" style="font-size:14px">update</span>
+                <span>Live</span>
             </div>
-        </main>
-        <footer class="mt-auto border-t border-border-dark py-6 px-6">
-            <div class="max-w-[1440px] mx-auto flex items-center justify-between">
-                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]">Alpha Sentinel v2.4.0-Stable
-                </p>
-                <div class="flex items-center gap-4 text-xs text-slate-500">
-                    <a class="hover:text-primary transition-colors" href="/">Documentation</a>
-                    <a class="hover:text-primary transition-colors" href="#">Support</a>
-                    <a class="hover:text-primary transition-colors" href="#">API Status</a>
-                </div>
-            </div>
-        </footer>
-    </div>
+        </div>
+
+        <!-- ── Monitor cards (mobile) ────────────────────────────── -->
+        <div id="monitor-cards" aria-label="Monitor list" role="feed">
+            <p class="empty-state">Loading…</p>
+        </div>
+
+        <!-- ── Monitor table (desktop) ──────────────────────────── -->
+        <div class="monitor-table-wrap" role="region" aria-label="Monitor table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Contract</th>
+                        <th>Entry Score</th>
+                        <th>Current Score</th>
+                        <th>Peak Score</th>
+                        <th>Δ Peak</th>
+                        <th>Trend</th>
+                        <th>Status</th>
+                        <th>Last Update</th>
+                        <th class="text-right" style="width:60px">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="monitor-tbody" class="divide-y divide-slate-800/50"></tbody>
+            </table>
+        </div>
+    </div><!-- /.page-content -->
+
+    <!-- ── Bottom nav (≤ 430px) ─────────────────────────────────── -->
+    <nav class="bottom-nav" aria-label="Mobile navigation">
+        <a href="/">
+            <span class="material-symbols-outlined">notifications_active</span>
+            Alerts
+        </a>
+        <a href="/monitor.html" class="active" aria-current="page">
+            <span class="material-symbols-outlined">monitoring</span>
+            Monitor
+        </a>
+    </nav>
+
     <script src="/app.js"></script>
 </body>
 

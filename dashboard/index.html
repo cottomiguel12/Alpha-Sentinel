@@ -1,405 +1,1039 @@
 <!DOCTYPE html>
-
 <html class="dark" lang="en">
 
 <head>
     <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Alpha Sentinel - Alerts Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Alpha Sentinel – Institutional options flow monitoring dashboard" />
+    <title>Alpha Sentinel – Alerts</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
-    <script id="tailwind-config">
+    <script>
         tailwind.config = {
-            darkMode: "class",
+            darkMode: 'class',
             theme: {
                 extend: {
-                    colors: {
-                        "primary": "#3c83f6",
-                        "background-light": "#f5f7f8",
-                        "background-dark": "#0f172a",
-                    },
-                    fontFamily: {
-                        "display": ["Inter", "sans-serif"]
-                    },
-                    borderRadius: {
-                        "DEFAULT": "0.25rem",
-                        "lg": "0.5rem",
-                        "xl": "0.75rem",
-                        "full": "9999px"
-                    },
-                },
-            },
-        }
+                    colors: { primary: '#3c83f6', 'bg-dark': '#0d1117' },
+                    fontFamily: { display: ['Inter', 'sans-serif'] }
+                }
+            }
+        };
     </script>
     <style>
+        /* ── Design tokens ─────────────────────────────────────────── */
+        :root {
+            --primary: #3c83f6;
+            --bg: #0d1117;
+            --surface: #161b22;
+            --surface2: #1f2937;
+            --border: #2d3748;
+            --text: #e2e8f0;
+            --muted: #64748b;
+            --header-h: 52px;
+            --nav-h: 56px;
+        }
+
+        /* ── Reset / base ──────────────────────────────────────────── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        html {
+            -webkit-text-size-adjust: 100%;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0f172a;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100dvh;
+            overflow-x: hidden;
         }
 
-        .custom-scrollbar::-webkit-scrollbar {
+        /* ── Compact header ────────────────────────────────────────── */
+        .site-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            height: var(--header-h);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-brand .logo-icon {
+            width: 28px;
+            height: 28px;
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .header-brand .brand-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -0.01em;
+        }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-dot {
             width: 6px;
             height: 6px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, .25);
         }
 
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #1e293b;
+        .pulse {
+            animation: pulse 2s infinite;
         }
 
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #334155;
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0.4
+            }
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-logout-compact {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            min-height: 32px;
+            transition: color .15s, background .15s;
+        }
+
+        .btn-logout-compact:hover {
+            color: #f87171;
+            background: rgba(248, 113, 113, .08);
+        }
+
+        .btn-logout-compact .material-symbols-outlined {
+            font-size: 16px;
+        }
+
+        /* Hide logout label on very small phones */
+        .btn-logout-compact .logout-label {
+            display: none;
+        }
+
+        @media (min-width: 360px) {
+            .btn-logout-compact .logout-label {
+                display: inline;
+            }
+        }
+
+        /* ── User pill (desktop only) ──────────────────────────────── */
+        .user-pill {
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .user-pill {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 12px;
+                color: var(--muted);
+            }
+        }
+
+        /* ── Tab nav (desktop) ─────────────────────────────────────── */
+        .tab-nav {
+            display: none;
+        }
+
+        @media (min-width: 431px) {
+            .tab-nav {
+                display: flex;
+                border-bottom: 1px solid var(--border);
+                padding: 0 16px;
+                background: var(--bg);
+            }
+
+            .tab-nav a {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 10px 16px;
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--muted);
+                border-bottom: 2px solid transparent;
+                transition: color .15s, border-color .15s;
+                text-decoration: none;
+            }
+
+            .tab-nav a.active,
+            .tab-nav a:hover {
+                color: #fff;
+            }
+
+            .tab-nav a.active {
+                border-bottom-color: var(--primary);
+            }
+
+            .tab-nav a .material-symbols-outlined {
+                font-size: 18px;
+            }
+        }
+
+        /* ── Bottom nav (mobile only) ──────────────────────────────── */
+        .bottom-nav {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            height: var(--nav-h);
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+        }
+
+        .bottom-nav a {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--muted);
+            transition: color .15s;
+        }
+
+        .bottom-nav a.active {
+            color: var(--primary);
+        }
+
+        .bottom-nav a .material-symbols-outlined {
+            font-size: 22px;
+        }
+
+        @media (min-width: 431px) {
+            .bottom-nav {
+                display: none;
+            }
+        }
+
+        /* ── Status ribbon ─────────────────────────────────────────── */
+        .status-ribbon {
+            display: grid;
+            gap: 8px;
+            grid-template-columns: repeat(4, 1fr);
+            padding: 12px 16px;
+        }
+
+        @media (min-width: 640px) {
+            .status-ribbon {
+                grid-template-columns: repeat(7, 1fr);
+            }
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 10px;
+        }
+
+        .stat-card .sc-label {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .stat-card .sc-val {
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        /* ── Filter bar ────────────────────────────────────────────── */
+        .filter-bar {
+            padding: 0 16px 10px;
+        }
+
+        .filter-toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .filter-toggle-row .filter-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--muted);
+        }
+
+        .btn-filter-toggle {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            min-height: 36px;
+            transition: color .15s, border-color .15s;
+        }
+
+        .btn-filter-toggle:hover {
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .btn-filter-toggle .material-symbols-outlined {
+            font-size: 16px;
+        }
+
+        /* Type chips inline (always visible) */
+        .type-chips {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .type-filter-btn {
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .15s;
+            min-height: 30px;
+        }
+
+        .type-filter-btn.active,
+        .type-filter-btn:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        /* Filter drawer (expandable) */
+        #filter-drawer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height .3s ease;
+        }
+
+        #filter-drawer.drawer-open {
+            max-height: 200px;
+        }
+
+        .filter-inner {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px 0 4px;
+        }
+
+        .filter-search {
+            position: relative;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-search .material-symbols-outlined {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+            font-size: 18px;
+            pointer-events: none;
+        }
+
+        #filter-symbol {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: #fff;
+            padding: 8px 12px 8px 36px;
+            font-size: 13px;
+            outline: none;
+            transition: border-color .15s;
+        }
+
+        #filter-symbol:focus {
+            border-color: var(--primary);
+        }
+
+        #filter-symbol::placeholder {
+            color: var(--muted);
+        }
+
+        /* ── Page content wrapper ──────────────────────────────────── */
+        .page-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+            padding-bottom: calc(var(--nav-h) + 8px);
+            /* space for bottom nav */
+        }
+
+        @media (min-width: 431px) {
+            .page-content {
+                padding-bottom: 24px;
+            }
+        }
+
+        /* ── Alert cards (mobile) ──────────────────────────────────── */
+        #alerts-cards {
+            padding: 0 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        @media (min-width: 431px) {
+            #alerts-cards {
+                display: none;
+            }
+        }
+
+        .alert-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            transition: border-color .15s;
+        }
+
+        .alert-card:hover {
+            border-color: rgba(60, 131, 246, .4);
+        }
+
+        .alert-card-hot {
+            border-left: 2px solid var(--primary);
+        }
+
+        .alert-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .alert-card-contract {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .alert-ticker {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .alert-strike {
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .alert-card-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .alert-card-meta {
+            font-size: 11px;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .dot {
+            color: var(--border);
+        }
+
+        .alert-card-row1,
+        .alert-card-row2 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+        }
+
+        .alert-card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        /* ── Alerts table (desktop ≥ 431px) ───────────────────────── */
+        .alerts-table-wrap {
+            display: none;
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            margin: 0 16px;
+        }
+
+        @media (min-width: 431px) {
+            .alerts-table-wrap {
+                display: block;
+            }
+        }
+
+        .alerts-table-wrap table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .alerts-table-wrap thead tr {
+            background: rgba(31, 41, 55, .7);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .alerts-table-wrap th {
+            padding: 10px 16px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+
+        .tbl-row {
+            transition: background .1s;
+        }
+
+        .tbl-row:hover {
+            background: rgba(255, 255, 255, .03);
+        }
+
+        /* ── Monitor cards (mobile) ────────────────────────────────── */
+        #monitor-cards {
+            padding: 0 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        @media (min-width: 431px) {
+            #monitor-cards {
+                display: none;
+            }
+        }
+
+        .monitor-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .monitor-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .monitor-ticker {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .monitor-contract {
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .monitor-scores {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+        }
+
+        .monitor-card-footer {
+            border-top: 1px solid var(--border);
+            padding-top: 6px;
+        }
+
+        /* ── Monitor table (desktop) ───────────────────────────────── */
+        .monitor-table-wrap {
+            display: none;
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            margin: 0 16px;
+        }
+
+        @media (min-width: 431px) {
+            .monitor-table-wrap {
+                display: block;
+            }
+        }
+
+        .monitor-table-wrap table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .monitor-table-wrap thead tr {
+            background: rgba(31, 41, 55, .7);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .monitor-table-wrap th {
+            padding: 10px 20px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+
+        /* ── Shared components ─────────────────────────────────────── */
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 7px;
+            border-radius: 100px;
+            border: 1px solid transparent;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            letter-spacing: 0.02em;
+        }
+
+        .chip-green {
+            background: rgba(16, 185, 129, .15);
+            border-color: rgba(16, 185, 129, .3);
+            color: #34d399;
+        }
+
+        .chip-yellow {
+            background: rgba(245, 158, 11, .12);
+            border-color: rgba(245, 158, 11, .3);
+            color: #fbbf24;
+        }
+
+        .chip-neutral {
+            background: var(--surface2);
+            border-color: var(--border);
+            color: #94a3b8;
+        }
+
+        .chip-blue {
+            background: rgba(60, 131, 246, .15);
+            border-color: rgba(60, 131, 246, .3);
+            color: var(--primary);
+        }
+
+        .chip-red {
+            background: rgba(239, 68, 68, .12);
+            border-color: rgba(239, 68, 68, .3);
+            color: #f87171;
+        }
+
+        .stat-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-val {
+            font-size: 13px;
+            font-weight: 600;
+            color: #cbd5e1;
+        }
+
+        .ticker-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            flex-shrink: 0;
+            background: rgba(60, 131, 246, .12);
+            border: 1px solid rgba(60, 131, 246, .2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .btn-track {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            transition: color .15s, transform .1s;
+            min-width: 30px;
+            min-height: 30px;
+            justify-content: center;
+        }
+
+        .btn-track:hover {
+            color: var(--primary);
+            transform: scale(1.15);
+        }
+
+        .btn-track-active {
+            color: var(--primary) !important;
+        }
+
+        .btn-track .material-symbols-outlined {
+            font-size: 20px;
+        }
+
+        .btn-remove {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            min-width: 30px;
+            min-height: 30px;
+            justify-content: center;
+            transition: color .15s;
+        }
+
+        .btn-remove:hover {
+            color: #f87171;
+        }
+
+        .sparkline-mini {
+            width: 64px;
+            height: 24px;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            background: transparent;
+        }
+
+        /* Generated in JS if needed, placeholder here */
+
+        .empty-state {
+            text-align: center;
+            color: var(--muted);
+            font-size: 13px;
+            padding: 40px 16px;
+        }
+
+        .empty-state-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 48px 16px;
+            color: var(--muted);
+        }
+
+        .recent-alert-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            transition: background .1s;
+        }
+
+        .recent-alert-item:last-child {
+            border-bottom: none;
+        }
+
+        .recent-alert-item:hover {
+            background: rgba(255, 255, 255, .03);
+        }
+
+        /* ── Sidebar (desktop) ─────────────────────────────────────── */
+        .main-layout {
+            display: flex;
+            min-height: 0;
+            gap: 0;
+        }
+
+        .content-col {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .sidebar {
+            display: none;
+            width: 280px;
+            flex-shrink: 0;
+            border-left: 1px solid var(--border);
+        }
+
+        @media (min-width: 900px) {
+            .sidebar {
+                display: flex;
+                flex-direction: column;
+            }
+        }
+
+        /* ── Scrollbar ─────────────────────────────────────────────── */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
             border-radius: 10px;
         }
 
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #475569;
+        /* ── Section headings ──────────────────────────────────────── */
+        .section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 12px 16px 6px;
         }
     </style>
 </head>
 
-<body class="bg-background-light dark:bg-background-dark text-slate-200 antialiased font-display">
-    <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
-        <!-- Header / Top Nav -->
-        <header
-            class="sticky top-0 z-50 flex items-center justify-between border-b border-slate-800 bg-background-dark/80 backdrop-blur-md px-6 py-3">
-            <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <span class="material-symbols-outlined text-3xl">monitoring</span>
-                </div>
-                <div>
-                    <h1 class="text-lg font-bold tracking-tight text-white">Alpha Sentinel</h1>
-                    <div
-                        class="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-400">
-                        <span class="relative flex h-2 w-2">
-                            <span
-                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                        </span>
-                        Market Status: <span class="text-emerald-400">Open</span> <span id="health-ts"
-                            class="ml-2 text-[8px]"></span>
-                    </div>
-                </div>
+<body>
+    <!-- ── Sticky Header ──────────────────────────────────────────── -->
+    <header class="site-header">
+        <div class="header-brand">
+            <!-- Logo SVG -->
+            <svg class="logo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M36.7273 44C33.9891 44 31.6043 39.8386 30.3636 33.69C29.123 39.8386 26.7382 44 24 44
+                 C21.2618 44 18.877 39.8386 17.6364 33.69C16.3957 39.8386 14.0109 44 11.2727 44
+                 C7.25611 44 4 35.0457 4 24C4 12.9543 7.25611 4 11.2727 4C14.0109 4 16.3957 8.16144
+                 17.6364 14.31C18.877 8.16144 21.2618 4 24 4C26.7382 4 29.123 8.16144 30.3636 14.31
+                 C31.6043 8.16144 33.9891 4 36.7273 4C40.7439 4 44 12.9543 44 24C44 35.0457 40.7439 44 36.7273 44Z"
+                    fill="currentColor" />
+            </svg>
+            <span class="brand-name">Alpha Sentinel</span>
+            <div class="header-status" style="margin-left:4px">
+                <span class="status-dot pulse"></span>
+                <span class="hidden sm:inline">Live</span>
+                <span id="health-ts" style="font-size:9px;margin-left:4px"></span>
             </div>
-            <div class="flex items-center gap-6">
-                <div class="hidden md:flex flex-col items-end">
-                    <span class="text-sm font-semibold text-white">admin@alphasentinel.io</span>
-                    <span
-                        class="inline-flex items-center rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary ring-1 ring-inset ring-primary/30">ADMIN</span>
-                </div>
-                <div class="h-8 w-[1px] bg-slate-800"></div>
-                <div class="flex items-center gap-3">
-                    <button
-                        class="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-800 hover:bg-slate-800 transition-colors text-slate-400">
-                        <span class="material-symbols-outlined">settings</span>
-                    </button>
-                    <button
-                        class="flex h-10 items-center gap-2 rounded-lg bg-slate-800 px-4 text-sm font-bold text-white hover:bg-slate-700 transition-colors">
-                        <span class="material-symbols-outlined text-lg">logout</span>
-                        <span id="logout-btn">Logout</span>
-                    </button>
-                    <div class="h-10 w-10 rounded-full border-2 border-slate-700 bg-slate-800 p-0.5">
-                        <img alt="Admin Profile" class="h-full w-full rounded-full object-cover"
-                            data-alt="User profile avatar illustration"
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDbRkeN4XrhaATuNChE5C3V381VKHFeUeeuusCc_GPQWUHyflIG9YnvFNUQhE-4HAaFWRkBdArbW2OPdmFwrOz_hPESgbpRmbsukC61SI39MiPgi4k_5nE8_7PQOoB8WNe8ftvl6XS0yfu4nXra_XeTxfzHItDIsQGQis52EWpDWHp1pOXiVqQXkVmtV2cDoaoHCOhu96zUMnbVXY2H_XGqb2YCkppDopmnCmQ5e_l4rL60xA6H_7WPiotcV5BD95KBBBtq7RYwliA" />
-                    </div>
-                </div>
+        </div>
+        <div class="header-right">
+            <div class="user-pill">
+                <span class="user-email" style="font-size:12px;color:#94a3b8"></span>
+                <span class="chip chip-blue user-role" style="font-size:9px"></span>
             </div>
-        </header>
-        <main class="flex-1 px-6 py-6 space-y-6 max-w-[1600px] mx-auto w-full">
-            <!-- Status Overview Cards -->
-            <section class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                <div class="flex flex-col gap-1 rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-                    <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Agent Status</span>
-                    <div class="flex items-center gap-2">
-                        <span class="text-lg font-bold text-white">Active</span>
-                        <span class="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
-                    </div>
-                </div>
-                <div class="flex flex-col gap-1 rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-                    <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">WebSocket</span>
-                    <div class="flex items-center gap-2">
-                        <span class="text-lg font-bold text-white">Connected</span>
-                        <span class="material-symbols-outlined text-emerald-500 text-sm">link</span>
-                    </div>
-                </div>
-                <div class="flex flex-col gap-1 rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-                    <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Last Event</span>
-                    <span class="text-lg font-bold text-white">2s ago</span>
-                </div>
-                <div
-                    class="flex flex-col gap-1 rounded-xl border border-slate-800 bg-slate-900/50 p-4 border-l-primary/30">
-                    <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Last Alert</span>
-                    <span class="text-lg font-bold text-primary">5m ago</span>
-                </div>
-                <div class="flex flex-col gap-1 rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-                    <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Events/min</span>
-                    <span class="text-lg font-bold text-white">142</span>
-                </div>
-                <div class="flex flex-col gap-1 rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-                    <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Alerts/min</span>
-                    <span class="text-lg font-bold text-white">4</span>
-                </div>
-                <div class="flex flex-col gap-1 rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-                    <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Errors</span>
-                    <span class="text-lg font-bold text-slate-500">0</span>
-                </div>
-            </section>
-            <!-- Tab Navigation & Filters -->
-            <div class="space-y-4">
-                <div class="flex border-b border-slate-800">
-                    <a class="flex items-center gap-2 border-b-2 border-primary px-6 py-3 text-sm font-bold text-white transition-colors"
-                        href="/">
-                        <span class="material-symbols-outlined text-lg">notifications_active</span>
-                        Alerts
-                    </a>
-                    <a class="flex items-center gap-2 border-b-2 border-transparent px-6 py-3 text-sm font-medium text-slate-500 hover:text-slate-300 transition-colors"
-                        href="/monitor.html">
-                        <span class="material-symbols-outlined text-lg">monitoring</span>
-                        Monitor
-                    </a>
-                </div>
-                <!-- Filter Bar -->
-                <div
-                    class="flex flex-wrap items-center gap-3 bg-slate-900/30 p-2 rounded-lg border border-slate-800/50">
-                    <!-- Search -->
-                    <div class="relative flex-1 min-w-[240px]">
-                        <span
-                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xl">search</span>
-                        <input
-                            class="w-full rounded-lg border-none bg-slate-800/50 pl-10 pr-4 py-2 text-sm text-white focus:ring-1 focus:ring-primary placeholder:text-slate-600"
-                            id="filter-symbol" placeholder="Search Ticker (e.g. AAPL, TSLA)" type="text" />
-                    </div>
-                    <!-- Dropdowns -->
-                    <div class="flex items-center gap-2">
-                        <button
-                            class="flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-700">
-                            Min Score: <span class="text-white">70</span>
-                            <span class="material-symbols-outlined text-sm">expand_more</span>
-                        </button>
-                        <button
-                            class="flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-700">
-                            Time: <span class="text-white">Last 1h</span>
-                            <span class="material-symbols-outlined text-sm">expand_more</span>
+            <button class="btn-logout-compact logout-btn">
+                <span class="material-symbols-outlined">logout</span>
+                <span class="logout-label">Logout</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- ── Tab nav (≥ 431px) ──────────────────────────────────────── -->
+    <nav class="tab-nav" aria-label="Main navigation">
+        <a href="/" class="active" id="nav-alerts">
+            <span class="material-symbols-outlined">notifications_active</span>Alerts
+        </a>
+        <a href="/monitor.html" id="nav-monitors">
+            <span class="material-symbols-outlined">monitoring</span>Monitor
+        </a>
+    </nav>
+
+    <div class="page-content">
+        <!-- ── Status ribbon ─────────────────────────────────────────── -->
+        <div class="status-ribbon">
+            <div class="stat-card"><span class="sc-label">Agent</span><span class="sc-val"
+                    style="color:#34d399">Active</span></div>
+            <div class="stat-card"><span class="sc-label">Feed</span><span class="sc-val"
+                    style="color:#3c83f6">Live</span></div>
+            <div class="stat-card"><span class="sc-label">Last Alert</span><span class="sc-val">—</span></div>
+            <div class="stat-card"><span class="sc-label">Today</span><span class="sc-val" id="alert-count">—</span>
+            </div>
+            <div class="stat-card" style="display:none" id="stat-events"><span class="sc-label">Events/m</span><span
+                    class="sc-val">—</span></div>
+            <div class="stat-card" style="display:none" id="stat-alertsm"><span class="sc-label">Alerts/m</span><span
+                    class="sc-val">—</span></div>
+            <div class="stat-card" style="display:none" id="stat-errors"><span class="sc-label">Errors</span><span
+                    class="sc-val" style="color:#64748b">0</span></div>
+        </div>
+
+        <div class="main-layout">
+            <div class="content-col">
+                <!-- ── Filter bar ─────────────────────────────────────────── -->
+                <div class="filter-bar">
+                    <div class="filter-toggle-row">
+                        <!-- Type chips (always visible) -->
+                        <div class="type-chips" id="type-filter-group" role="group" aria-label="Contract type filter">
+                            <button class="type-filter-btn active" data-type="" aria-pressed="true">All</button>
+                            <button class="type-filter-btn" data-type="C" aria-pressed="false">Calls</button>
+                            <button class="type-filter-btn" data-type="P" aria-pressed="false">Puts</button>
+                        </div>
+                        <!-- Filter toggle -->
+                        <button class="btn-filter-toggle" id="filter-toggle" aria-expanded="false"
+                            aria-controls="filter-drawer">
+                            <span class="material-symbols-outlined">tune</span>
+                            <span>Filter</span>
                         </button>
                     </div>
-                    <div class="h-6 w-[1px] bg-slate-800"></div>
-                    <!-- Toggles -->
-                    <div class="flex items-center rounded-lg bg-slate-800 p-1" id="type-filter-group">
-                        <button data-type=""
-                            class="type-filter-btn rounded-md bg-primary px-3 py-1 text-xs font-bold text-white shadow-sm transition-all duration-200">All</button>
-                        <button data-type="C"
-                            class="type-filter-btn rounded-md px-3 py-1 text-xs font-medium text-slate-400 hover:text-white transition-all duration-200">Calls</button>
-                        <button data-type="P"
-                            class="type-filter-btn rounded-md px-3 py-1 text-xs font-medium text-slate-400 hover:text-white transition-all duration-200">Puts</button>
-                    </div>
-                    <div class="flex items-center gap-2 ml-auto">
-                        <span class="text-xs font-medium text-slate-500 uppercase">Whale Only</span>
-                        <button
-                            class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-slate-700 transition-colors focus:outline-none ring-offset-slate-900 focus:ring-2 focus:ring-primary">
-                            <span
-                                class="translate-x-0 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
-                        </button>
+
+                    <!-- Drawer (search, etc.) -->
+                    <div id="filter-drawer">
+                        <div class="filter-inner">
+                            <div class="filter-search">
+                                <span class="material-symbols-outlined">search</span>
+                                <input id="filter-symbol" type="text" placeholder="Search ticker…" autocorrect="off"
+                                    autocapitalize="none" />
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <!-- Alerts Table -->
-            <div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/20 backdrop-blur-sm">
-                <div class="overflow-x-auto custom-scrollbar">
-                    <table class="w-full text-left border-collapse">
+
+                <!-- ── Alerts – mobile cards ──────────────────────────────── -->
+                <div id="alerts-cards" aria-label="Alerts list" role="feed">
+                    <p class="empty-state">Loading alerts…</p>
+                </div>
+
+                <!-- ── Alerts – desktop table ─────────────────────────────── -->
+                <div class="alerts-table-wrap" role="region" aria-label="Alerts table">
+                    <table id="alerts-table">
                         <thead>
-                            <tr class="border-b border-slate-800 bg-slate-800/50">
-                                <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Time</th>
-                                <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Ticker</th>
-                                <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Contract</th>
-                                <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase text-right">Premium
-                                </th>
-                                <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase text-right">Size
-                                </th>
-                                <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase text-right">Vol/OI
-                                </th>
-                                <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase text-right">Spread %
-                                </th>
-                                <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase text-right">OTM %
-                                </th>
-                                <th id="th-score"
-                                    class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase text-center cursor-pointer hover:text-white transition-colors group select-none">
-                                    <div class="flex items-center justify-center gap-1">
+                            <tr>
+                                <th>Time</th>
+                                <th>Ticker</th>
+                                <th>Contract</th>
+                                <th class="text-right">Premium</th>
+                                <th class="text-right">Size</th>
+                                <th class="text-right">Vol/OI</th>
+                                <th class="text-right">Spread %</th>
+                                <th class="text-right">OTM %</th>
+                                <th class="text-center cursor-pointer select-none hover:text-white" id="th-score">
+                                    <div style="display:flex;align-items:center;justify-content:center;gap:4px">
                                         Score
                                         <span id="sort-icon-score"
-                                            class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-50 transition-opacity">swap_vert</span>
+                                            class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-50">swap_vert</span>
                                     </div>
                                 </th>
-                                <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Tags</th>
-                                <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase text-right">Track
-                                </th>
+                                <th>Tags</th>
+                                <th class="text-right" style="width:56px">Track</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-800/50">
-                            <!-- Row 1 -->
-                            <tr class="hover:bg-slate-800/30 transition-colors group">
-                                <td class="px-4 py-3 text-sm text-slate-400">14:32:11</td>
-                                <td class="px-4 py-3 text-sm font-bold text-white tracking-wide">TSLA</td>
-                                <td class="px-4 py-3 text-sm font-medium text-emerald-400">$215.00C 11/24</td>
-                                <td class="px-4 py-3 text-sm font-bold text-white text-right">$450.2K</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">1,240</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">2.4x</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">0.8%</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">4.2%</td>
-                                <td class="px-4 py-3 text-center">
-                                    <span
-                                        class="inline-flex items-center justify-center rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-emerald-400 border border-emerald-500/30">88.4</span>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <div class="flex gap-1">
-                                        <span
-                                            class="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">SWEEP</span>
-                                        <span
-                                            class="rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-bold text-primary">WHALE</span>
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    <button
-                                        class="material-symbols-outlined text-slate-600 hover:text-primary transition-colors">star</button>
-                                </td>
-                            </tr>
-                            <!-- Row 2 -->
-                            <tr class="hover:bg-slate-800/30 transition-colors group bg-primary/5">
-                                <td class="px-4 py-3 text-sm text-slate-400">14:31:05</td>
-                                <td class="px-4 py-3 text-sm font-bold text-white tracking-wide">NVDA</td>
-                                <td class="px-4 py-3 text-sm font-medium text-emerald-400">$485.00C 12/15</td>
-                                <td class="px-4 py-3 text-sm font-bold text-white text-right">$1.2M</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">340</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">0.5x</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">1.2%</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">1.5%</td>
-                                <td class="px-4 py-3 text-center">
-                                    <span
-                                        class="inline-flex items-center justify-center rounded bg-primary/20 px-2 py-0.5 text-xs font-bold text-primary border border-primary/30">94.1</span>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <div class="flex gap-1">
-                                        <span
-                                            class="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-400">GOLDEN</span>
-                                        <span
-                                            class="rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-bold text-primary">WHALE</span>
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    <button class="material-symbols-outlined text-primary">star</button>
-                                </td>
-                            </tr>
-                            <!-- Row 3 -->
-                            <tr class="hover:bg-slate-800/30 transition-colors group">
-                                <td class="px-4 py-3 text-sm text-slate-400">14:28:44</td>
-                                <td class="px-4 py-3 text-sm font-bold text-white tracking-wide">AAPL</td>
-                                <td class="px-4 py-3 text-sm font-medium text-rose-400">$185.00P 11/17</td>
-                                <td class="px-4 py-3 text-sm font-bold text-white text-right">$210.5K</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">4,500</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">11.2x</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">0.2%</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">2.8%</td>
-                                <td class="px-4 py-3 text-center">
-                                    <span
-                                        class="inline-flex items-center justify-center rounded bg-slate-700 px-2 py-0.5 text-xs font-bold text-slate-300 border border-slate-600">74.3</span>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <div class="flex gap-1">
-                                        <span
-                                            class="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">SWEEP</span>
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    <button
-                                        class="material-symbols-outlined text-slate-600 hover:text-primary transition-colors">star</button>
-                                </td>
-                            </tr>
-                            <!-- Row 4 -->
-                            <tr class="hover:bg-slate-800/30 transition-colors group">
-                                <td class="px-4 py-3 text-sm text-slate-400">14:25:30</td>
-                                <td class="px-4 py-3 text-sm font-bold text-white tracking-wide">MSFT</td>
-                                <td class="px-4 py-3 text-sm font-medium text-emerald-400">$375.00C 01/19</td>
-                                <td class="px-4 py-3 text-sm font-bold text-white text-right">$88.2K</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">120</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">0.8x</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">1.5%</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">6.0%</td>
-                                <td class="px-4 py-3 text-center">
-                                    <span
-                                        class="inline-flex items-center justify-center rounded bg-slate-700 px-2 py-0.5 text-xs font-bold text-slate-300 border border-slate-600">71.8</span>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <div class="flex gap-1">
-                                        <span
-                                            class="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">BLOCK</span>
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    <button
-                                        class="material-symbols-outlined text-slate-600 hover:text-primary transition-colors">star</button>
-                                </td>
-                            </tr>
-                            <!-- Row 5 -->
-                            <tr class="hover:bg-slate-800/30 transition-colors group">
-                                <td class="px-4 py-3 text-sm text-slate-400">14:22:15</td>
-                                <td class="px-4 py-3 text-sm font-bold text-white tracking-wide">AMD</td>
-                                <td class="px-4 py-3 text-sm font-medium text-emerald-400">$120.00C 01/24</td>
-                                <td class="px-4 py-3 text-sm font-bold text-white text-right">$640.9K</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">800</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">3.5x</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">0.5%</td>
-                                <td class="px-4 py-3 text-sm text-slate-300 text-right">5.1%</td>
-                                <td class="px-4 py-3 text-center">
-                                    <span
-                                        class="inline-flex items-center justify-center rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-emerald-400 border border-emerald-500/30">85.0</span>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <div class="flex gap-1">
-                                        <span
-                                            class="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">SWEEP</span>
-                                        <span
-                                            class="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">HIGH
-                                            VOL</span>
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    <button
-                                        class="material-symbols-outlined text-slate-600 hover:text-primary transition-colors">star</button>
-                                </td>
-                            </tr>
-                        </tbody>
+                        <tbody class="divide-y divide-slate-800/50"></tbody>
                     </table>
                 </div>
-                <!-- Pagination / Footer -->
-                <div class="flex items-center justify-between border-t border-slate-800 bg-slate-800/20 px-6 py-4">
-                    <span class="text-sm text-slate-500">Showing 1-25 of 1,432 alerts</span>
-                    <div class="flex gap-2">
-                        <button
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-slate-400 hover:bg-slate-800 disabled:opacity-50"
-                            disabled="">
-                            <span class="material-symbols-outlined text-lg">chevron_left</span>
-                        </button>
-                        <button
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white">1</button>
-                        <button
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-sm font-medium text-slate-400 hover:bg-slate-800">2</button>
-                        <button
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-sm font-medium text-slate-400 hover:bg-slate-800">3</button>
-                        <button
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-slate-400 hover:bg-slate-800">
-                            <span class="material-symbols-outlined text-lg">chevron_right</span>
-                        </button>
+            </div><!-- /.content-col -->
+
+            <!-- ── Sidebar (desktop ≥ 900px) ─────────────────────────── -->
+            <aside class="sidebar">
+                <div class="section-title">Top Alerts · 15m</div>
+                <div id="recent-alerts-list" style="flex:1;overflow-y:auto"></div>
+                <!-- User card -->
+                <div style="padding:14px;border-top:1px solid var(--border)">
+                    <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Signed in as</div>
+                    <div class="user-email" style="font-size:13px;font-weight:600;color:#fff;word-break:break-all">
+                    </div>
+                    <div style="margin-top:4px"><span class="chip chip-blue user-role" style="font-size:9px"></span>
                     </div>
                 </div>
-            </div>
-        </main>
-    </div>
+            </aside>
+        </div><!-- /.main-layout -->
+    </div><!-- /.page-content -->
+
+    <!-- ── Bottom nav (≤ 430px) ──────────────────────────────────── -->
+    <nav class="bottom-nav" aria-label="Mobile navigation">
+        <a href="/" class="active" aria-current="page">
+            <span class="material-symbols-outlined">notifications_active</span>
+            Alerts
+        </a>
+        <a href="/monitor.html">
+            <span class="material-symbols-outlined">monitoring</span>
+            Monitor
+        </a>
+    </nav>
+
     <script src="/app.js"></script>
 </body>
 
