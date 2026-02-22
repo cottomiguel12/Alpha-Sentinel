@@ -39,13 +39,13 @@ class BaseProvider:
 # ---------------------------------------------------------------------------
 
 class CSVProvider(BaseProvider):
-    """Tails the configured OPTIONS_CSV file, yielding new rows each tick."""
+    """Tails the configured OPTIONS_CSV / OPTIONS_CSVS files, yielding new rows each tick."""
 
     def __init__(self, agent: "SentinelAgent") -> None:
         self._agent = agent
 
     def fetch(self) -> "List[AlertRow]":
-        return self._agent._read_csv_new()
+        return self._agent._read_all_csvs()
 
 
 # ---------------------------------------------------------------------------

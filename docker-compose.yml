@@ -15,7 +15,7 @@ services:
       UW_ENABLED: "0"
       UW_BASE_URL: "https://api.unusualwhales.com"
     volumes:
-      - ./data:/data
+      - ./AlphaSentinel-data:/data
       - sentinel_logs:/logs
     networks: [ core_net ]
     restart: unless-stopped
@@ -31,7 +31,8 @@ services:
     environment:
       DB_PATH: /data/sentinel.db
       LOG_PATH: /logs/agent.log
-      OPTIONS_CSV: /data/options-flow-02-15-2026.csv
+      OPTIONS_CSVS: "/data/etfs.csv,/data/stocks.csv"
+      # OPTIONS_CSV: ""  # legacy single-file fallback (leave blank when OPTIONS_CSVS is set)
       AGENT_INTERVAL_SEC: "1.5"
       MAX_ALERTS_PER_TICK: "25"
       REPLAY_FROM_START: "0"
@@ -43,7 +44,7 @@ services:
       UW_POLL_SEC: "2"
       UW_RATE_LIMIT_SLEEP: "0.25"
     volumes:
-      - ./data:/data
+      - ./AlphaSentinel-data:/data
       - ./config:/app/config:ro
       - sentinel_logs:/logs
     networks: [ core_net ]

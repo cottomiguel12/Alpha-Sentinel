@@ -29,6 +29,7 @@ def db():
 
 def init_db():
     with db() as conn:
+
         conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -138,3 +139,15 @@ def init_db():
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_uw_events_ts ON uw_events(ts)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_uw_events_ticker_ts ON uw_events(ticker, ts)")
+
+        # --- Non-destructive column migrations ---
+
+        # Add alerts.source column if it doesn't exist yet (safe for existing DBs)
+        existing_alert_cols = {r["name"] for r in conn.execute("PRAGMA table_info(alerts)").fetchall()}
+        if "source" not in existing_alert_cols:
+            conn.execute("ALTER TABLE alerts ADD COLUMN source TEXT")
+
+        # Add alerts.contract_key column if it doesn't exist yet (legacy migration)
+        if "contract_key" not in existing_alert_cols:
+            conn.execute("ALTER TABLE alerts ADD COLUMN contract_key TEXT")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_alerts_contract_key ON alerts(contract_key)")

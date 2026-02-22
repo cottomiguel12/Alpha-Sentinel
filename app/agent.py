@@ -262,9 +262,25 @@ class AlertRow:
     tags: str
     reason_codes: str
     contract_key: str
+    source: str = "CSV"  # CSV_ETF | CSV_STOCK | CSV | MOCK
 
 
-def _row_from_csv(rec: Dict[str, Any]) -> Optional[AlertRow]:
+def _source_tag(path: str) -> str:
+    """
+    Derive source tag from file path.
+      etfs.csv   -> CSV_ETF
+      stocks.csv -> CSV_STOCK
+      else       -> CSV
+    """
+    name = os.path.basename(path).lower()
+    if "etf" in name:
+        return "CSV_ETF"
+    if "stock" in name:
+        return "CSV_STOCK"
+    return "CSV"
+
+
+def _row_from_csv(rec: Dict[str, Any], source: str = "CSV") -> Optional[AlertRow]:
     """
     Supports your CSV header:
       Symbol,Price~,Type,Strike,Expires,DTE,"Bid x Size","Ask x Size",Trade,Size,Side,Premium,Volume,"Open Int",IV,Delta,Code,*,Time
@@ -290,10 +306,8 @@ def _row_from_csv(rec: Dict[str, Any]) -> Optional[AlertRow]:
     volume = _safe_int(_pick(rec, ["volume", "Volume", "vol"], 0), 0)
     oi = _safe_int(_pick(rec, ["oi", "Open Int", "open_interest"], 0), 0)
 
-    # Your CSV provides "Price~" as underlying/spot-ish. Use it as spot for now.
     spot = _safe_float(_pick(rec, ["spot", "Price~", "Price", "underlying_price", "last"], 0.0), 0.0)
 
-    # Your CSV gives Bid x Size / Ask x Size strings; parse bid/ask as first token
     bid_x = str(_pick(rec, ["bid", "Bid x Size", "Bid"], "")).strip()
     ask_x = str(_pick(rec, ["ask", "Ask x Size", "Ask"], "")).strip()
 
@@ -323,11 +337,10 @@ def _row_from_csv(rec: Dict[str, Any]) -> Optional[AlertRow]:
         else:
             otm_pct = (spot - strike) / spot * 100.0
 
-    # If CSV includes DTE, use it; else compute from exp date
     dte = _safe_int(_pick(rec, ["DTE", "dte"], None), default=-1)
     if dte < 0:
         dte = _dte_from_exp(exp)
-        
+
     code_str = str(_pick(rec, ["Code", "code"], "")).strip()
 
     score = _score_row(
@@ -340,7 +353,7 @@ def _row_from_csv(rec: Dict[str, Any]) -> Optional[AlertRow]:
         code=code_str,
     )
 
-    ck = _contract_key(ticker, exp, strike, opt_type)
+    ck = _normalize_contract_key(_contract_key(ticker, exp, strike, opt_type))
     return AlertRow(
         ts=now_iso(),
         ticker=ticker,
@@ -358,9 +371,10 @@ def _row_from_csv(rec: Dict[str, Any]) -> Optional[AlertRow]:
         otm_pct=round(float(otm_pct), 2),
         dte=int(dte),
         score_total=float(score),
-        tags=f"CSV_{code_str}" if code_str else "CSV",
+        tags=f"{source}_{code_str}" if code_str else source,
         reason_codes=json.dumps(["CSV_IMPORT", code_str]) if code_str else json.dumps(["CSV_IMPORT"]),
         contract_key=ck,
+        source=source,
     )
 
 
@@ -428,9 +442,18 @@ class SentinelAgent:
             return v
 
         # YAML keys supported:
-        # options_csv, interval_sec, max_alerts_per_tick, replay_from_start, watchlist_refresh_sec
-        csv_raw = str(_cfg("options_csv", "OPTIONS_CSV", "")).strip()
-        self.csv_path = csv_raw or None
+        # options_csvs, options_csv, interval_sec, max_alerts_per_tick, replay_from_start, watchlist_refresh_sec
+
+        # Multi-file: OPTIONS_CSVS takes priority; fall back to OPTIONS_CSV for backward compat
+        csvs_raw = str(_cfg("options_csvs", "OPTIONS_CSVS", "")).strip()
+        if csvs_raw:
+            self.csv_paths = [p.strip() for p in csvs_raw.split(",") if p.strip()]
+        else:
+            single = str(_cfg("options_csv", "OPTIONS_CSV", "")).strip()
+            self.csv_paths = [single] if single else []
+
+        # Keep backward-compat attribute for providers / old code that checks self.csv_path
+        self.csv_path = self.csv_paths[0] if self.csv_paths else None
 
         self.interval = float(_cfg("interval_sec", "AGENT_INTERVAL_SEC", "2.5"))
         self.max_alerts_per_tick = int(_cfg("max_alerts_per_tick", "MAX_ALERTS_PER_TICK", "25"))
@@ -444,9 +467,17 @@ class SentinelAgent:
         except Exception:
             print(f"[agent] loaded_config: {cfg}")
 
-        # one-time: force full replay from start (for static CSV imports)
+        # Initialise per-file state dict (backward compat: keep top-level csv_offset/csv_header too)
+        if "csv_files" not in self.state:
+            self.state["csv_files"] = {}
+
+        # Reset all per-file offsets if REPLAY_FROM_START=1
         if replay_from_start:
-            ...
+            self.state["csv_files"] = {}
+            self.state["csv_offset"] = 0
+            self.state["csv_header"] = None
+            _save_state(self.state_path, self.state)
+            self._log("REPLAY_FROM_START=1: reset all CSV offsets")
 
         # Provider selection (UW > CSV > Mock)
         # Import here to avoid circular imports at module load time
@@ -461,33 +492,27 @@ class SentinelAgent:
     def _log(self, msg: str) -> None:
         print(f"[AGENT] {msg}", flush=True)
 
-    def _read_csv_new(self) -> List[AlertRow]:
+    def _read_csv_file(self, path: str, file_state: Dict[str, Any], source: str = "CSV") -> List[AlertRow]:
         """
-        Byte-offset tailer that:
-        - reads header once (offset==0), stores it in state
-        - reads up to max_alerts_per_tick new lines each tick
-        - advances offset ONLY by bytes actually consumed for processed lines
+        Byte-offset tailer for a single CSV file.
+        file_state is state['csv_files'][path] — a dict with 'offset' and 'header'.
+        Advances file_state['offset'] in place and saves state.
         """
-        if not self.csv_path:
+        if not os.path.exists(path):
+            self._log(f"CSV not found: {path}")
             return []
 
-        if not os.path.exists(self.csv_path):
-            self._log(f"OPTIONS_CSV not found: {self.csv_path}")
-            return []
-
-        file_size = os.path.getsize(self.csv_path)
-        offset = int(self.state.get("csv_offset", 0) or 0)
-        header = self.state.get("csv_header")
+        file_size = os.path.getsize(path)
+        offset = int(file_state.get("offset", 0) or 0)
+        header = file_state.get("header")
 
         if offset >= file_size:
-            # at EOF (no new lines) — caller will still heartbeat
-            return []
+            return []  # EOF
 
         rows: List[AlertRow] = []
 
         try:
-            with open(self.csv_path, "rb") as f:
-                # If first run, read header line and store it.
+            with open(path, "rb") as f:
                 if offset == 0 or not header:
                     header_line = f.readline()
                     offset = f.tell()
@@ -498,21 +523,20 @@ class SentinelAgent:
                         header = None
 
                     if not header:
-                        self._log("CSV header missing/unreadable")
+                        self._log(f"CSV header missing/unreadable: {path}")
                         return []
 
-                    self.state["csv_header"] = header
-                    self.state["csv_offset"] = offset
+                    file_state["header"] = header
+                    file_state["offset"] = offset
                     _save_state(self.state_path, self.state)
 
-                # Seek to current offset, read line-by-line
                 f.seek(offset)
                 consumed_offset = offset
 
                 while len(rows) < self.max_alerts_per_tick:
                     line = f.readline()
                     if not line:
-                        break  # EOF
+                        break
 
                     consumed_offset = f.tell()
                     text = line.decode("utf-8", errors="ignore").strip("\r\n")
@@ -522,23 +546,50 @@ class SentinelAgent:
                     try:
                         values = next(csv.reader([text]))
                         if header and len(values) < len(header):
-                            # partial / malformed line; skip but still advance offset (avoid infinite loop)
                             continue
                         rec = dict(zip(header, values)) if header else {}
-                        ar = _row_from_csv(rec)
+                        ar = _row_from_csv(rec, source=source)
                         if ar:
                             rows.append(ar)
                     except Exception:
                         continue
 
-                # Save the offset where we stopped reading (NOT necessarily EOF)
-                self.state["csv_offset"] = consumed_offset
+                file_state["offset"] = consumed_offset
                 _save_state(self.state_path, self.state)
 
             return rows
         except Exception as e:
-            self._log(f"CSV read error: {e}")
+            self._log(f"CSV read error ({path}): {e}")
             return []
+
+    def _read_all_csvs(self) -> List[AlertRow]:
+        """
+        Iterates all configured CSV paths, reads up to max_alerts_per_tick total rows
+        across all files, tagged by _source_tag.
+        Per-file state is stored under state['csv_files'][path].
+        """
+        all_rows: List[AlertRow] = []
+        remaining = self.max_alerts_per_tick
+
+        for path in self.csv_paths:
+            if remaining <= 0:
+                break
+            source = _source_tag(path)
+            if path not in self.state["csv_files"]:
+                self.state["csv_files"][path] = {"offset": 0, "header": None}
+            file_state = self.state["csv_files"][path]
+
+            rows = self._read_csv_file(path, file_state, source=source)
+            all_rows.extend(rows[:remaining])
+            remaining -= len(rows)
+
+        return all_rows
+
+    # Keep _read_csv_new for backward compat (CSVProvider can still call it for single-file mode)
+    def _read_csv_new(self) -> List[AlertRow]:
+        if not self.csv_path:
+            return []
+        return self._read_all_csvs()
 
     def _insert_alerts(self, alerts: List[AlertRow]) -> int:
         if not alerts:
@@ -547,10 +598,27 @@ class SentinelAgent:
         inserted = 0
         with db() as conn:
             has_ck = _alerts_has_contract_key(conn)
+            col_names = {r["name"] for r in conn.execute("PRAGMA table_info(alerts)").fetchall()}
+            has_source = "source" in col_names
 
             for a in alerts:
                 try:
-                    if has_ck:
+                    ck = _normalize_contract_key(a.contract_key)
+                    if has_ck and has_source:
+                        conn.execute(
+                            """
+                            INSERT INTO alerts
+                            (ts,contract_key,ticker,exp,strike,opt_type,premium,size,volume,oi,bid,ask,spread_pct,spot,otm_pct,dte,score_total,tags,reason_codes,source)
+                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                            """,
+                            (
+                                a.ts, ck, a.ticker, a.exp, a.strike, a.opt_type,
+                                a.premium, a.size, a.volume, a.oi, a.bid, a.ask, a.spread_pct,
+                                a.spot, a.otm_pct, a.dte, a.score_total, a.tags, a.reason_codes,
+                                a.source,
+                            ),
+                        )
+                    elif has_ck:
                         conn.execute(
                             """
                             INSERT INTO alerts
@@ -558,7 +626,7 @@ class SentinelAgent:
                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                             """,
                             (
-                                a.ts, a.contract_key, a.ticker, a.exp, a.strike, a.opt_type,
+                                a.ts, ck, a.ticker, a.exp, a.strike, a.opt_type,
                                 a.premium, a.size, a.volume, a.oi, a.bid, a.ask, a.spread_pct,
                                 a.spot, a.otm_pct, a.dte, a.score_total, a.tags, a.reason_codes
                             ),
@@ -581,6 +649,7 @@ class SentinelAgent:
                     self._log(f"insert alert failed: {e}")
 
         return inserted
+
 
     def _active_watchlist_keys(self) -> List[str]:
         with db() as conn:
