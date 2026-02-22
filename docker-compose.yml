@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile.api
     working_dir: /app
     env_file:
-      - .env 
+      - .env
       - .secrets.env
     environment:
       DB_PATH: /data/sentinel.db
@@ -15,7 +15,7 @@ services:
     volumes:
       - ./data:/data
       - sentinel_logs:/logs
-    networks: [core_net]
+    networks: [ core_net ]
     restart: unless-stopped
     ports:
       - "127.0.0.1:8001:8001"
@@ -25,7 +25,7 @@ services:
       context: .
       dockerfile: Dockerfile.agent
     working_dir: /app
-    env_file: [.env]
+    env_file: [ .env ]
     environment:
       DB_PATH: /data/sentinel.db
       LOG_PATH: /logs/agent.log
@@ -38,9 +38,19 @@ services:
       - ./data:/data
       - ./config:/app/config:ro
       - sentinel_logs:/logs
-    networks: [core_net]
+    networks: [ core_net ]
     restart: unless-stopped
-    depends_on: [sentinel-api]
+    depends_on: [ sentinel-api ]
+
+  sentinel-dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    networks: [ core_net ]
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:3000:80"
+    depends_on: [ sentinel-api ]
 
 networks:
   core_net:
