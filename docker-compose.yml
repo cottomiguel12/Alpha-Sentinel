@@ -49,7 +49,7 @@ services:
     networks: [ core_net ]
     restart: unless-stopped
     ports:
-      - "0.0.0.0:8080:80"
+      - "0.0.0.0:3000:80"
     depends_on: [ sentinel-api ]
 
 networks:
