@@ -33,7 +33,7 @@ To monitor the sentinel agent or API container directly:
 The frontend dashboard serves HTML traffic from port 3000 mapping to Nginx port 80.
 Navigate to your VPS IP over HTTP on port 3000.
 
-**URL:** `http://<YOUR_VPS_IP>:3000`
+**URL:** `http://69.62.67.133:3000`
 
 ## Troubleshooting (Common Issues)
 *   **"Connection Refused" when visiting Port 3000:** Check if Port 3000 is open in the firewall (e.g., `ufw allow 3000` on Ubuntu) or double-check the `status` command to ensure `sentinel-dashboard` is running.
