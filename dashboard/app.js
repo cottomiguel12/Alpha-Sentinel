@@ -283,9 +283,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Login Form logic
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
+        const emailInput = document.getElementById('email');
+        if (emailInput) {
+            emailInput.addEventListener('input', (e) => {
+                e.target.value = e.target.value.trim();
+            });
+        }
+
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('email').value;
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
 
             try {
