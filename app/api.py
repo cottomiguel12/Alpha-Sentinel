@@ -459,6 +459,14 @@ async def delete_watchlist(contract_key: str, user=Depends(require_user)):
     return {"ok": True, "deleted": contract_key}
 
 
+@APP.post("/admin/purge-mock")
+async def purge_mock(user=Depends(require_user)):
+    with db() as conn:
+        result = conn.execute("DELETE FROM alerts WHERE tags = 'MOCK' OR reason_codes LIKE '%MOCK_DATA%'")
+        deleted = result.rowcount
+    return {"ok": True, "deleted": deleted}
+
+
 # ----------------------------
 # Entrypoint
 # ----------------------------
