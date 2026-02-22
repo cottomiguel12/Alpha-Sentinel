@@ -139,23 +139,60 @@ def _dte_from_exp(exp: str) -> int:
         return 0
 
 
-def _score_row(premium: float, volume: int, oi: int, spread_pct: float, otm_pct: float, dte: int) -> float:
+def _score_row(premium: float, volume: int, oi: int, spread_pct: float, otm_pct: float, dte: int, code: str) -> float:
     """
-    Simple heuristic score (0-100):
-    - premium + volume + oi boost score
-    - wide spreads reduce score
-    - far OTM + long DTE reduce score slightly
+    Advanced Conviction Scoring (0-100+):
+    - Massive premium gets exponential bonus
+    - Vol > OI indicates new position openings
+    - Short DTE with large premium indicates urgency
+    - Sweeps & Blocks add to conviction
     """
-    prem_component = _clamp(math.log10(max(premium, 1.0)) * 12.0, 0, 45)
-    vol_component = _clamp(math.log10(max(volume, 1)) * 10.0, 0, 25)
-    oi_component = _clamp(math.log10(max(oi, 1)) * 6.0, 0, 12)
-
-    spread_penalty = _clamp(spread_pct * 2.0, 0, 18)           # 0-9% => 0-18 penalty
-    otm_penalty = _clamp(max(0.0, otm_pct) * 0.25, 0, 12)      # 0-48% => 0-12 penalty
-    dte_penalty = _clamp(max(0, dte - 14) * 0.25, 0, 10)       # > 2w penalize
-
-    score = prem_component + vol_component + oi_component - spread_penalty - otm_penalty - dte_penalty
-    return round(_clamp(score, 0, 100), 1)
+    score = 0.0
+    
+    # 1. Premium Weighting (Exponential for whales)
+    if premium >= 1_000_000:
+        score += 45.0 + _clamp(math.log10(premium / 1_000_000) * 15.0, 0, 15.0)
+    elif premium >= 100_000:
+        score += 25.0 + _clamp(math.log10(premium / 100_000) * 15.0, 0, 20.0)
+    else:
+        score += _clamp(math.log10(max(premium, 1.0)) * 5.0, 0, 25.0)
+        
+    # 2. Volume vs Open Interest (Conviction)
+    # If volume is higher than OI, it means new contracts are being opened aggressively
+    if oi > 0:
+        vol_oi_ratio = volume / oi
+        if vol_oi_ratio > 2.0:
+            score += 20.0
+        elif vol_oi_ratio > 1.0:
+            score += 10.0
+        else:
+            score += _clamp(vol_oi_ratio * 10.0, 0, 10.0)
+    elif volume > 500: # No OI but high volume (new strike/expiry)
+        score += 15.0
+        
+    # 3. Execution Type (Sweeps & Blocks)
+    code_upper = code.upper()
+    is_sweep = "SWEEP" in code_upper
+    is_block = "BLOCK" in code_upper
+    if is_sweep:
+        score += 15.0
+    elif is_block:
+        score += 10.0
+        
+    # 4. Urgency (DTE) combined with conviction
+    # High premium on short DTE is very urgent
+    if dte <= 14 and premium >= 100_000:
+        score += 10.0
+    elif dte > 60:
+        score -= 5.0 # LEAPS are less urgent
+        
+    # 5. Penalties (Sloppy execution / lottery tickets)
+    spread_penalty = _clamp(spread_pct * 1.5, 0, 15.0)
+    otm_penalty = _clamp(max(0.0, otm_pct) * 0.2, 0, 10.0)
+    
+    score = score - spread_penalty - otm_penalty
+    
+    return round(_clamp(score, 0, 100.0), 1)
 
 
 def _load_state(path: str) -> Dict[str, Any]:
@@ -282,6 +319,8 @@ def _row_from_csv(rec: Dict[str, Any]) -> Optional[AlertRow]:
     dte = _safe_int(_pick(rec, ["DTE", "dte"], None), default=-1)
     if dte < 0:
         dte = _dte_from_exp(exp)
+        
+    code_str = str(_pick(rec, ["Code", "code"], "")).strip()
 
     score = _score_row(
         premium=premium,
@@ -290,6 +329,7 @@ def _row_from_csv(rec: Dict[str, Any]) -> Optional[AlertRow]:
         spread_pct=spread_pct,
         otm_pct=otm_pct,
         dte=dte,
+        code=code_str,
     )
 
     ck = _contract_key(ticker, exp, strike, opt_type)
