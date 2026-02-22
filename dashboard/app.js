@@ -157,40 +157,48 @@ async function loadMonitors(isBackground = false) {
 
         tr.innerHTML = `
             <td class="px-6 py-4">
-                <div class="flex items-center gap-3">
-                    <button class="material-symbols-outlined text-${item.is_aoi ? 'primary' : 'slate-500'} hover:text-primary transition-colors text-xl" onclick="toggleAOI('${item.contract_key}', ${item.is_aoi})">
-                        star
-                    </button>
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20">
+                        <span class="text-[10px] font-bold text-primary">${item.ticker.substring(0, 2)}</span>
+                    </div>
                     <div>
-                        <div class="flex items-center gap-2">
-                            <span class="font-bold text-white tracking-wide">${item.ticker}</span>
-                            <span class="text-xs font-medium ${item.opt_type === 'C' ? 'text-emerald-400 bg-emerald-400/10' : 'text-rose-400 bg-rose-400/10'} px-2 py-0.5 rounded border ${item.opt_type === 'C' ? 'border-emerald-500/20' : 'border-rose-500/20'}">
-                                $${item.strike} ${item.opt_type}
-                            </span>
-                        </div>
-                        <div class="text-sm text-slate-400 mt-1">Exp: ${item.exp}</div>
+                        <span class="text-sm font-bold text-white">${item.ticker}</span>
+                        <span class="text-xs text-slate-400 ml-1">$${item.strike}${item.opt_type} ${item.exp}</span>
                     </div>
                 </div>
             </td>
+            <td class="px-6 py-4 text-sm tabular-nums text-slate-400">
+                ${item.entry_score ? item.entry_score.toFixed(2) : '-'}
+            </td>
             <td class="px-6 py-4">
-                <div class="flex flex-col gap-1 items-end">
-                    <span class="font-bold text-white">${item.current_score ? item.current_score.toFixed(1) : '-'}</span>
-                    <span class="text-xs text-slate-500">Peak: ${item.peak_score ? item.peak_score.toFixed(1) : '-'}</span>
+                <span class="text-sm font-bold text-white tabular-nums">${item.current_score ? item.current_score.toFixed(2) : '-'}</span>
+            </td>
+            <td class="px-6 py-4 text-sm tabular-nums text-slate-400">
+                ${item.peak_score ? item.peak_score.toFixed(2) : '-'}
+            </td>
+            <td class="px-6 py-4 text-sm tabular-nums ${item.delta_from_peak < 0 ? 'text-red-400' : 'text-emerald-500'}">
+                ${item.delta_from_peak !== null ? item.delta_from_peak : '-'}
+            </td>
+            <td class="px-6 py-4">
+                <div class="w-20 h-8 flex items-end gap-0.5 opacity-60">
+                    <div class="flex-1 bg-primary/40 h-[40%] rounded-t-sm"></div>
+                    <div class="flex-1 bg-primary/60 h-[60%] rounded-t-sm"></div>
+                    <div class="flex-1 bg-primary/80 h-[80%] rounded-t-sm"></div>
+                    <div class="flex-1 bg-primary h-[100%] rounded-t-sm"></div>
                 </div>
             </td>
-            <td class="px-6 py-4 text-right">
-                <span class="text-sm font-medium ${item.delta_from_peak < 0 ? 'text-rose-400' : 'text-slate-400'}">${item.delta_from_peak}</span>
-            </td>
-            <td class="px-6 py-4 text-right text-sm text-slate-300">
-                ${formatCurrency(item.entry_premium)}
-            </td>
-            <td class="px-6 py-4 text-right">
-                <span class="inline-flex py-1 px-2.5 rounded-full text-xs font-medium ${item.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-800 text-slate-400'}">
-                    ${item.status}
+            <td class="px-6 py-4">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${item.status === 'ACTIVE' || item.status === 'Monitor' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'} uppercase border">
+                    ${item.status || 'TRACKING'}
                 </span>
             </td>
-            <td class="px-6 py-4 text-right text-sm text-slate-400">
+            <td class="px-6 py-4 text-sm text-slate-400">
                 ${formatDate(item.last_update_ts)}
+            </td>
+            <td class="px-6 py-4 text-right">
+                <button title="Remove from Monitor" class="text-slate-600 hover:text-red-500 transition-colors" onclick="toggleAOI('${item.contract_key}', 1)">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
             </td>
         `;
         tbody.appendChild(tr);
