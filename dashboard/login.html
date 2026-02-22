@@ -108,12 +108,17 @@
             width: 100%;
             border-radius: 8px;
             border: 1px solid var(--border);
-            background: #0d1117;
-            color: #fff;
+            background: #1a2030 !important;
+            color: #e2e8f0 !important;
+            -webkit-text-fill-color: #e2e8f0 !important;
+            caret-color: #e2e8f0;
             padding: 10px 14px;
-            font-size: 14px;
+            font-size: 16px;
+            /* 16px prevents auto-zoom on iOS */
             font-family: 'Inter', sans-serif;
             outline: none;
+            -webkit-appearance: none;
+            appearance: none;
             transition: border-color .15s;
         }
 
@@ -123,7 +128,18 @@
         }
 
         .form-input::placeholder {
-            color: var(--muted);
+            color: #475569;
+            opacity: 1;
+        }
+
+        /* Force dark bg on browser autofill (Chrome/Safari/iOS) */
+        .form-input:-webkit-autofill,
+        .form-input:-webkit-autofill:hover,
+        .form-input:-webkit-autofill:focus {
+            -webkit-box-shadow: 0 0 0 1000px #1a2030 inset !important;
+            -webkit-text-fill-color: #e2e8f0 !important;
+            caret-color: #e2e8f0;
+            border-color: var(--border);
         }
 
         .pw-toggle {
