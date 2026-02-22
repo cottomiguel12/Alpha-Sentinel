@@ -70,19 +70,21 @@ async function updateHealth() {
 }
 
 // Load Alerts
-async function loadAlerts() {
+async function loadAlerts(isBackground = false) {
     const tbody = document.querySelector('tbody');
     if (!tbody) return;
-    
+
     // Check if we are on Alerts page
     if (!window.location.pathname.includes('index.html') && window.location.pathname !== '/') return;
 
-    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-slate-400">Loading alerts...</td></tr>';
+    if (!isBackground) {
+        tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-slate-400">Loading alerts...</td></tr>';
+    }
 
     try {
         const urlParams = new URLSearchParams();
         urlParams.append('limit', '50');
-        
+
         // basic filters logic
         const symbolInput = document.getElementById('filter-symbol');
         if (symbolInput && symbolInput.value) urlParams.append('symbol', symbolInput.value);
@@ -132,14 +134,16 @@ async function loadAlerts() {
 }
 
 // Load Monitors
-async function loadMonitors() {
+async function loadMonitors(isBackground = false) {
     const tbody = document.querySelector('#monitor-tbody');
     if (!tbody) return;
 
     if (!window.location.pathname.includes('monitor.html')) return;
 
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-slate-400">Loading monitors...</td></tr>';
-    
+    if (!isBackground) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-slate-400">Loading monitors...</td></tr>';
+    }
+
     const data = await fetchApi('/monitors');
     if (!data || !data.items) {
         tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-rose-400">Failed to load monitors</td></tr>';
@@ -150,7 +154,7 @@ async function loadMonitors() {
     data.items.forEach(item => {
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-slate-800/30 transition-colors group border-b border-slate-800/50';
-        
+
         tr.innerHTML = `
             <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
@@ -194,12 +198,14 @@ async function loadMonitors() {
 }
 
 // Recent Top Alerts Panel
-async function loadTopRecent() {
+async function loadTopRecent(isBackground = false) {
     const listEl = document.getElementById('recent-alerts-list');
     if (!listEl) return;
 
-    listEl.innerHTML = '<div class="p-4 text-sm text-slate-400 text-center">Loading top alerts...</div>';
-    
+    if (!isBackground) {
+        listEl.innerHTML = '<div class="p-4 text-sm text-slate-400 text-center">Loading top alerts...</div>';
+    }
+
     // Top alerts last 15 mins
     const data = await fetchApi('/alerts/recent?window_sec=900&limit=5');
     if (!data || !data.items || data.items.length === 0) {
@@ -237,9 +243,9 @@ async function toggleAOI(contractKey, currentActive) {
     });
     // refresh
     if (window.location.pathname.includes('monitor.html')) {
-        loadMonitors();
+        loadMonitors(true);
     } else {
-        loadAlerts();
+        loadAlerts(true);
     }
 }
 
@@ -258,7 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            
+
             try {
                 const res = await fetch(`${API_BASE}/auth/login`, {
                     method: 'POST',
@@ -295,20 +301,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Filters logic
     const filterInput = document.getElementById('filter-symbol');
     if (filterInput) {
-        filterInput.addEventListener('change', () => loadAlerts());
+        filterInput.addEventListener('change', () => loadAlerts(false));
     }
 
     // Initial Load
     updateHealth();
-    loadAlerts();
-    loadMonitors();
-    loadTopRecent();
+    loadAlerts(false);
+    loadMonitors(false);
+    loadTopRecent(false);
 
     // Auto refresh every 5s
     setInterval(() => {
         updateHealth();
-        loadAlerts();
-        loadMonitors();
-        loadTopRecent();
+        loadAlerts(true);
+        loadMonitors(true);
+        loadTopRecent(true);
     }, 5000);
 });
