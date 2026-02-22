@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Alpha Sentinel - Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3c83f6",
+                        "background-light": "#f5f7f8",
+                        "background-dark": "#101722",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .form-input:focus {
+            border-color: #3c83f6 !important;
+            box-shadow: 0 0 0 1px #3c83f6 !important;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col font-display">
+<!-- Top Navigation Placeholder (Simplified) -->
+<header class="w-full px-6 py-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-2">
+<div class="text-primary size-8">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M36.7273 44C33.9891 44 31.6043 39.8386 30.3636 33.69C29.123 39.8386 26.7382 44 24 44C21.2618 44 18.877 39.8386 17.6364 33.69C16.3957 39.8386 14.0109 44 11.2727 44C7.25611 44 4 35.0457 4 24C4 12.9543 7.25611 4 11.2727 4C14.0109 4 16.3957 8.16144 17.6364 14.31C18.877 8.16144 21.2618 4 24 4C26.7382 4 29.123 8.16144 30.3636 14.31C31.6043 8.16144 33.9891 4 36.7273 4C40.7439 4 44 12.9543 44 24C44 35.0457 40.7439 44 36.7273 44Z" fill="currentColor"></path>
+</svg>
+</div>
+<span class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Alpha Sentinel</span>
+</div>
+<div class="flex gap-4">
+<button class="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">Support</button>
+</div>
+</header>
+<main class="flex-grow flex items-center justify-center p-6">
+<div class="w-full max-w-[440px]">
+<!-- Login Card -->
+<div class="bg-white dark:bg-[#1b222c] border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl p-8">
+<div class="text-center mb-8">
+<h1 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">Welcome Back</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm">Institutional options flow monitoring</p>
+</div>
+<form class="space-y-6">
+<div>
+<label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2" for="email">Institutional Email</label>
+<input class="form-input block w-full rounded-lg border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#101722] text-slate-900 dark:text-white px-4 py-3 placeholder-slate-400 dark:placeholder-slate-600 focus:ring-primary focus:border-primary transition-all sm:text-sm" id="email" name="email" placeholder="name@firm.com" type="email"/>
+</div>
+<div>
+<div class="flex items-center justify-between mb-2">
+<label class="block text-sm font-medium text-slate-700 dark:text-slate-300" for="password">Password</label>
+<a class="text-xs font-semibold text-primary hover:underline" href="#">Forgot password?</a>
+</div>
+<div class="relative">
+<input class="form-input block w-full rounded-lg border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#101722] text-slate-900 dark:text-white px-4 py-3 placeholder-slate-400 dark:placeholder-slate-600 focus:ring-primary focus:border-primary transition-all sm:text-sm pr-10" id="password" name="password" placeholder="••••••••" type="password"/>
+<button class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 dark:text-slate-600 hover:text-slate-300" type="button">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+</button>
+</div>
+</div>
+<div class="flex items-center">
+<input class="h-4 w-4 rounded border-slate-300 dark:border-slate-700 text-primary focus:ring-primary bg-slate-50 dark:bg-[#101722]" id="remember-me" name="remember-me" type="checkbox"/>
+<label class="ml-2 block text-sm text-slate-600 dark:text-slate-400" for="remember-me">Remember this device</label>
+</div>
+<button class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-primary hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors" type="submit">
+                        Log In
+                    </button>
+</form>
+<div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 text-center">
+<p class="text-sm text-slate-500 dark:text-slate-400">
+                        Don't have an account? 
+                        <a class="font-semibold text-primary hover:underline" href="#">Request access</a>
+</p>
+</div>
+</div>
+<!-- Subtle Security Info -->
+<div class="mt-8 flex items-center justify-center gap-4 text-slate-400 dark:text-slate-600 text-xs">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">lock</span>
+<span>256-bit Encryption</span>
+</div>
+<div class="w-1 h-1 rounded-full bg-slate-400 dark:bg-slate-700"></div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">verified_user</span>
+<span>SAML 2.0 Ready</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full py-6 px-10 text-center">
+<p class="text-[11px] font-medium tracking-widest text-slate-400 dark:text-slate-600 uppercase">
+            Alpha Sentinel V2.4.0-STABLE
+        </p>
+<div class="mt-2 flex justify-center gap-6 text-[11px] text-slate-400 dark:text-slate-600">
+<a class="hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="hover:text-primary transition-colors" href="#">Terms of Service</a>
+<a class="hover:text-primary transition-colors" href="#">System Status</a>
+</div>
+</footer>
+</body></html>

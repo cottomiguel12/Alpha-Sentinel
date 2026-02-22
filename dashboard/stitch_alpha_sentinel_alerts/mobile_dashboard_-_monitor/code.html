@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Alpha Sentinel - Monitor Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3c83f6",
+                        "background-light": "#f5f7f8",
+                        "background-dark": "#101722",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .sparkline-bar {
+            transition: height 0.3s ease;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen pb-24">
+<!-- Header Section -->
+<header class="sticky top-0 z-30 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center p-4 justify-between max-w-md mx-auto">
+<div class="flex items-center gap-3">
+<div class="bg-primary/10 p-2 rounded-lg">
+<span class="material-symbols-outlined text-primary text-2xl">shield_person</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight">Alpha Sentinel</h1>
+</div>
+<div class="flex gap-2">
+<button class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+</header>
+<main class="max-w-md mx-auto px-4 pt-4">
+<!-- Global Stats Grid -->
+<div class="grid grid-cols-2 gap-3 mb-6">
+<div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-4 rounded-xl">
+<p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Total Tracked</p>
+<div class="flex items-end justify-between">
+<h2 class="text-2xl font-bold">24</h2>
+<span class="text-xs font-semibold text-emerald-500 flex items-center mb-1">
+<span class="material-symbols-outlined text-sm">trending_up</span> 12%
+                    </span>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-4 rounded-xl">
+<p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Avg Score</p>
+<div class="flex items-end justify-between">
+<h2 class="text-2xl font-bold">78.4</h2>
+<span class="text-xs font-semibold text-rose-500 flex items-center mb-1">
+<span class="material-symbols-outlined text-sm">trending_down</span> 2%
+                    </span>
+</div>
+</div>
+</div>
+<!-- Navigation Segmented Control -->
+<div class="bg-slate-200/50 dark:bg-slate-900 p-1 rounded-xl flex mb-4">
+<button class="flex-1 py-2 text-sm font-medium rounded-lg text-slate-500 dark:text-slate-400 transition-all">
+                Alerts
+            </button>
+<button class="flex-1 py-2 text-sm font-bold rounded-lg bg-white dark:bg-primary text-slate-900 dark:text-white shadow-sm transition-all">
+                Monitor
+            </button>
+</div>
+<!-- View Subtitle -->
+<div class="text-center mb-6">
+<p class="text-[11px] font-semibold text-slate-500 dark:text-slate-500 uppercase tracking-[0.1em]">
+                Shared tracked contracts • updates every 10–15 seconds
+            </p>
+</div>
+<!-- Monitor Cards List -->
+<div class="space-y-4">
+<!-- Card 1 -->
+<div class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+<div class="p-4">
+<div class="flex justify-between items-start mb-4">
+<div class="space-y-1">
+<code class="text-xs font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded">0x71C...4E2A</code>
+<div class="flex items-center gap-1.5 mt-2">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+</span>
+<span class="text-[10px] font-bold text-emerald-500 tracking-widest uppercase">Tracking</span>
+</div>
+</div>
+<div class="text-right">
+<p class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Current Score</p>
+<h3 class="text-3xl font-black text-slate-900 dark:text-white leading-none">82.1</h3>
+</div>
+</div>
+<!-- Sparkline Visualization -->
+<div class="flex items-end gap-1 h-8 mb-4">
+<div class="bg-primary/20 w-full h-[40%] rounded-t-sm"></div>
+<div class="bg-primary/30 w-full h-[55%] rounded-t-sm"></div>
+<div class="bg-primary/40 w-full h-[70%] rounded-t-sm"></div>
+<div class="bg-primary/60 w-full h-[65%] rounded-t-sm"></div>
+<div class="bg-primary/80 w-full h-[85%] rounded-t-sm"></div>
+<div class="bg-primary w-full h-[100%] rounded-t-sm"></div>
+<div class="bg-primary w-full h-[90%] rounded-t-sm"></div>
+<div class="bg-primary/70 w-full h-[75%] rounded-t-sm"></div>
+</div>
+<!-- Metrics Grid -->
+<div class="grid grid-cols-3 border-y border-slate-100 dark:border-slate-800/50 py-3 mb-3">
+<div class="text-center border-r border-slate-100 dark:border-slate-800/50">
+<p class="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-bold mb-1">Entry</p>
+<p class="text-sm font-semibold">72.5</p>
+</div>
+<div class="text-center border-r border-slate-100 dark:border-slate-800/50">
+<p class="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-bold mb-1">Peak</p>
+<p class="text-sm font-semibold">85.0</p>
+</div>
+<div class="text-center">
+<p class="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-bold mb-1">Δ Peak</p>
+<p class="text-sm font-semibold text-rose-500">-2.9</p>
+</div>
+</div>
+<!-- Footer -->
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span class="text-[11px] font-medium uppercase tracking-tight">Updated 2s ago</span>
+</div>
+<button class="px-3 py-1.5 rounded-lg border border-rose-500/30 text-rose-500 hover:bg-rose-500/10 text-[11px] font-bold uppercase transition-colors">
+                            Remove
+                        </button>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm opacity-90">
+<div class="p-4">
+<div class="flex justify-between items-start mb-4">
+<div class="space-y-1">
+<code class="text-xs font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded">0x3A2...9F11</code>
+<div class="flex items-center gap-1.5 mt-2">
+<span class="relative flex h-2 w-2">
+<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+</span>
+<span class="text-[10px] font-bold text-emerald-500 tracking-widest uppercase">Tracking</span>
+</div>
+</div>
+<div class="text-right">
+<p class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Current Score</p>
+<h3 class="text-3xl font-black text-slate-900 dark:text-white leading-none">64.8</h3>
+</div>
+</div>
+<div class="flex items-end gap-1 h-8 mb-4">
+<div class="bg-primary/60 w-full h-[40%] rounded-t-sm"></div>
+<div class="bg-primary/80 w-full h-[60%] rounded-t-sm"></div>
+<div class="bg-primary w-full h-[90%] rounded-t-sm"></div>
+<div class="bg-primary/70 w-full h-[70%] rounded-t-sm"></div>
+<div class="bg-primary/40 w-full h-[50%] rounded-t-sm"></div>
+<div class="bg-primary/30 w-full h-[30%] rounded-t-sm"></div>
+<div class="bg-primary/40 w-full h-[45%] rounded-t-sm"></div>
+<div class="bg-primary/60 w-full h-[65%] rounded-t-sm"></div>
+</div>
+<div class="grid grid-cols-3 border-y border-slate-100 dark:border-slate-800/50 py-3 mb-3">
+<div class="text-center border-r border-slate-100 dark:border-slate-800/50">
+<p class="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-bold mb-1">Entry</p>
+<p class="text-sm font-semibold">41.2</p>
+</div>
+<div class="text-center border-r border-slate-100 dark:border-slate-800/50">
+<p class="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-bold mb-1">Peak</p>
+<p class="text-sm font-semibold">69.4</p>
+</div>
+<div class="text-center">
+<p class="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-bold mb-1">Δ Peak</p>
+<p class="text-sm font-semibold text-rose-500">-4.6</p>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span class="text-[11px] font-medium uppercase tracking-tight">Updated 14s ago</span>
+</div>
+<button class="px-3 py-1.5 rounded-lg border border-rose-500/30 text-rose-500 hover:bg-rose-500/10 text-[11px] font-bold uppercase transition-colors">
+                            Remove
+                        </button>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm opacity-80">
+<div class="p-4">
+<div class="flex justify-between items-start mb-4">
+<div class="space-y-1">
+<code class="text-xs font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded">0x9DC...B41C</code>
+<div class="flex items-center gap-1.5 mt-2">
+<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+<span class="text-[10px] font-bold text-emerald-500 tracking-widest uppercase">Tracking</span>
+</div>
+</div>
+<div class="text-right">
+<p class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Current Score</p>
+<h3 class="text-3xl font-black text-slate-900 dark:text-white leading-none">94.2</h3>
+</div>
+</div>
+<div class="flex items-end gap-1 h-8 mb-4">
+<div class="bg-primary/20 w-full h-[20%] rounded-t-sm"></div>
+<div class="bg-primary/40 w-full h-[40%] rounded-t-sm"></div>
+<div class="bg-primary/60 w-full h-[60%] rounded-t-sm"></div>
+<div class="bg-primary/80 w-full h-[80%] rounded-t-sm"></div>
+<div class="bg-primary w-full h-[100%] rounded-t-sm"></div>
+<div class="bg-primary w-full h-[100%] rounded-t-sm"></div>
+<div class="bg-primary w-full h-[95%] rounded-t-sm"></div>
+<div class="bg-primary w-full h-[98%] rounded-t-sm"></div>
+</div>
+<div class="grid grid-cols-3 border-y border-slate-100 dark:border-slate-800/50 py-3 mb-3">
+<div class="text-center border-r border-slate-100 dark:border-slate-800/50">
+<p class="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-bold mb-1">Entry</p>
+<p class="text-sm font-semibold">12.0</p>
+</div>
+<div class="text-center border-r border-slate-100 dark:border-slate-800/50">
+<p class="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-bold mb-1">Peak</p>
+<p class="text-sm font-semibold">95.1</p>
+</div>
+<div class="text-center">
+<p class="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-bold mb-1">Δ Peak</p>
+<p class="text-sm font-semibold text-rose-500">-0.9</p>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span class="text-[11px] font-medium uppercase tracking-tight">Updated 1s ago</span>
+</div>
+<button class="px-3 py-1.5 rounded-lg border border-rose-500/30 text-rose-500 hover:bg-rose-500/10 text-[11px] font-bold uppercase transition-colors">
+                            Remove
+                        </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 safe-area-bottom">
+<div class="flex max-w-md mx-auto items-center justify-around py-3 px-2">
+<a class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Dashboard</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">monitoring</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Monitor</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined">notifications</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Alerts</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Settings</span>
+</a>
+</div>
+</nav>
+</body></html>
