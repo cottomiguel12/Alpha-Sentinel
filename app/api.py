@@ -95,6 +95,15 @@ def require_user(req: Request) -> Dict[str, Any]:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
+def require_role(*roles: str):
+    """Return a FastAPI dependency that enforces the caller has one of the given roles."""
+    def _guard(user: Dict[str, Any] = Depends(require_user)):
+        if user.get("role") not in roles:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        return user
+    return _guard
+
+
 # ----------------------------
 # Pydantic models
 # ----------------------------
@@ -116,6 +125,12 @@ class AOIIn(BaseModel):
 class ToggleIn(BaseModel):
     contract_key: str
     is_active: int = Field(..., ge=0, le=1)
+
+
+class CreateUserIn(BaseModel):
+    email: str
+    password: str
+    role: str = "viewer"
 
 
 # ----------------------------
@@ -389,7 +404,7 @@ def _make_contract_key(ticker: str, exp: str, strike: float, opt_type: str) -> s
 
 
 @APP.post("/aoi")
-async def add_aoi(body: AOIIn, user=Depends(require_user)):
+async def add_aoi(body: AOIIn, user=Depends(require_role("sentinel"))):
     # build contract_key
     if body.contract_key:
         ck = body.contract_key.strip()
@@ -413,7 +428,7 @@ async def add_aoi(body: AOIIn, user=Depends(require_user)):
 
 
 @APP.post("/aoi/from_alert/{alert_id}")
-async def add_aoi_from_alert(alert_id: int, notes: Optional[str] = None, user=Depends(require_user)):
+async def add_aoi_from_alert(alert_id: int, notes: Optional[str] = None, user=Depends(require_role("sentinel"))):
     with db() as conn:
         r = conn.execute("SELECT * FROM alerts WHERE id=?", (int(alert_id),)).fetchone()
         if not r:
@@ -438,7 +453,7 @@ async def add_aoi_from_alert(alert_id: int, notes: Optional[str] = None, user=De
 
 
 @APP.post("/watchlist/toggle")
-async def toggle_watchlist(body: ToggleIn, user=Depends(require_user)):
+async def toggle_watchlist(body: ToggleIn, user=Depends(require_role("sentinel"))):
     with db() as conn:
         conn.execute(
             """
@@ -453,18 +468,48 @@ async def toggle_watchlist(body: ToggleIn, user=Depends(require_user)):
 
 
 @APP.delete("/watchlist/{contract_key}")
-async def delete_watchlist(contract_key: str, user=Depends(require_user)):
+async def delete_watchlist(contract_key: str, user=Depends(require_role("sentinel"))):
     with db() as conn:
         conn.execute("DELETE FROM watchlist WHERE contract_key=?", (contract_key,))
     return {"ok": True, "deleted": contract_key}
 
 
 @APP.post("/admin/purge-mock")
-async def purge_mock(user=Depends(require_user)):
+async def purge_mock(user=Depends(require_role("sentinel"))):
     with db() as conn:
         result = conn.execute("DELETE FROM alerts WHERE tags = 'MOCK' OR reason_codes LIKE '%MOCK_DATA%'")
         deleted = result.rowcount
     return {"ok": True, "deleted": deleted}
+
+
+@APP.post("/users")
+async def create_user(body: CreateUserIn, user=Depends(require_role("sentinel"))):
+    email = (body.email or "").strip().lower()
+
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Invalid email")
+
+    if len(body.password or "") < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+
+    role = (body.role or "viewer").strip().lower()
+    if role not in ("viewer", "sentinel"):
+        raise HTTPException(status_code=400, detail="Invalid role — must be 'viewer' or 'sentinel'")
+
+    with db() as conn:
+        existing = conn.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()
+        if existing:
+            raise HTTPException(status_code=409, detail="User already exists")
+
+        conn.execute(
+            """
+            INSERT INTO users (email,password_hash,role,is_active,created_at,last_login_at)
+            VALUES (?,?,?,?,?,?)
+            """,
+            (email, _pbkdf2_hash(body.password), role, 1, now_iso(), None),
+        )
+
+    return {"ok": True, "email": email, "role": role}
 
 
 # ----------------------------
