@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+python-jose
+passlib[bcrypt]
+pydantic
+requests==2.32.5

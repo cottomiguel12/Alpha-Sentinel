@@ -1,0 +1,14 @@
+.git/
+__pycache__/
+*.pyc
+
+# Never push secrets
+.env
+.secrets.env
+*.env
+
+# Never push runtime data/logs
+data/
+*.db
+*.log
+logs/

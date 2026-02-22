@@ -1,0 +1,5 @@
+interval_sec: 1.5
+max_alerts_per_tick: 25
+replay_from_start: false
+watchlist_refresh_sec: 5
+options_csv: /data/options-flow-02-15-2026.csv
