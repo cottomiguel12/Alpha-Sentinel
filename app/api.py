@@ -137,10 +137,11 @@ async def lifespan(app: FastAPI):
                 (ADMIN_EMAIL, _pbkdf2_hash(ADMIN_PASSWORD), ADMIN_ROLE, 1, now_iso(), None),
             )
         else:
-            # ensure active + role set; do NOT overwrite password_hash unless empty
-            if not row["password_hash"]:
-                conn.execute("UPDATE users SET password_hash=? WHERE email=?", (_pbkdf2_hash(ADMIN_PASSWORD), ADMIN_EMAIL))
-            conn.execute("UPDATE users SET role=?, is_active=1 WHERE email=?", (ADMIN_ROLE, ADMIN_EMAIL))
+            # Always sync admin password and role during startup so env holds priority
+            conn.execute(
+                "UPDATE users SET password_hash=?, role=?, is_active=1 WHERE email=?", 
+                (_pbkdf2_hash(ADMIN_PASSWORD), ADMIN_ROLE, ADMIN_EMAIL)
+            )
 
     yield
 
