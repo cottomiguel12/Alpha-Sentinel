@@ -2,6 +2,8 @@
 
 const API_BASE = '/api';
 
+let currentTypeFilter = '';
+
 // Utilities
 function getToken() {
     return localStorage.getItem('sentinel_token');
@@ -88,6 +90,7 @@ async function loadAlerts(isBackground = false) {
         // basic filters logic
         const symbolInput = document.getElementById('filter-symbol');
         if (symbolInput && symbolInput.value) urlParams.append('symbol', symbolInput.value);
+        if (currentTypeFilter) urlParams.append('type', currentTypeFilter);
 
         const data = await fetchApi(`/alerts?${urlParams.toString()}`);
         if (!data || !data.items) {
@@ -333,6 +336,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (filterInput) {
         filterInput.addEventListener('change', () => loadAlerts(false));
     }
+
+    const typeBtns = document.querySelectorAll('.type-filter-btn');
+    typeBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            typeBtns.forEach(b => {
+                b.classList.remove('bg-primary', 'font-bold', 'text-white', 'shadow-sm');
+                b.classList.add('text-slate-400', 'font-medium');
+            });
+            const target = e.currentTarget;
+            target.classList.remove('text-slate-400', 'font-medium');
+            target.classList.add('bg-primary', 'font-bold', 'text-white', 'shadow-sm');
+
+            currentTypeFilter = target.getAttribute('data-type');
+            loadAlerts(false);
+        });
+    });
 
     // Initial Load
     updateHealth();

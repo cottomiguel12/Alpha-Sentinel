@@ -191,11 +191,13 @@
                     </div>
                     <div class="h-6 w-[1px] bg-slate-800"></div>
                     <!-- Toggles -->
-                    <div class="flex items-center rounded-lg bg-slate-800 p-1">
-                        <button class="rounded-md bg-primary px-3 py-1 text-xs font-bold text-white shadow-sm">Calls
-                            Only</button>
-                        <button
-                            class="px-3 py-1 text-xs font-medium text-slate-400 hover:text-white transition-colors">Puts</button>
+                    <div class="flex items-center rounded-lg bg-slate-800 p-1" id="type-filter-group">
+                        <button data-type=""
+                            class="type-filter-btn rounded-md bg-primary px-3 py-1 text-xs font-bold text-white shadow-sm transition-all duration-200">All</button>
+                        <button data-type="C"
+                            class="type-filter-btn rounded-md px-3 py-1 text-xs font-medium text-slate-400 hover:text-white transition-all duration-200">Calls</button>
+                        <button data-type="P"
+                            class="type-filter-btn rounded-md px-3 py-1 text-xs font-medium text-slate-400 hover:text-white transition-all duration-200">Puts</button>
                     </div>
                     <div class="flex items-center gap-2 ml-auto">
                         <span class="text-xs font-medium text-slate-500 uppercase">Whale Only</span>
