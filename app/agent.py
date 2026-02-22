@@ -151,9 +151,9 @@ def _score_row(premium: float, volume: int, oi: int, spread_pct: float, otm_pct:
     
     # 1. Premium Weighting (Exponential for whales)
     if premium >= 1_000_000:
-        score += 45.0 + _clamp(math.log10(premium / 1_000_000) * 15.0, 0, 15.0)
+        score += 45.0 + _clamp(math.log10(max(premium / 1_000_000, 1.0)) * 15.0, 0, 15.0)
     elif premium >= 100_000:
-        score += 25.0 + _clamp(math.log10(premium / 100_000) * 15.0, 0, 20.0)
+        score += 25.0 + _clamp(math.log10(max(premium / 100_000, 1.0)) * 15.0, 0, 20.0)
     else:
         score += _clamp(math.log10(max(premium, 1.0)) * 5.0, 0, 25.0)
         
