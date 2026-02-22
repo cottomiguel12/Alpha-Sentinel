@@ -350,8 +350,8 @@ def _row_from_csv(rec: Dict[str, Any]) -> Optional[AlertRow]:
         otm_pct=round(float(otm_pct), 2),
         dte=int(dte),
         score_total=float(score),
-        tags="CSV",
-        reason_codes=json.dumps(["CSV_IMPORT"]),
+        tags=f"CSV_{code_str}" if code_str else "CSV",
+        reason_codes=json.dumps(["CSV_IMPORT", code_str]) if code_str else json.dumps(["CSV_IMPORT"]),
         contract_key=ck,
     )
 
