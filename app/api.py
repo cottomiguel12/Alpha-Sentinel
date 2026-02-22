@@ -468,6 +468,40 @@ async def purge_mock(user=Depends(require_user)):
 
 
 # ----------------------------
+# Integrations status endpoints
+# ----------------------------
+
+@APP.get("/integrations")
+async def integrations(user=Depends(require_user)):
+    uw_enabled = os.environ.get("UW_ENABLED", "0").strip() in ("1", "true", "yes")
+    uw_api_key = os.environ.get("UW_API_KEY", "").strip()
+    uw_base_url = os.environ.get("UW_BASE_URL", "https://api.unusualwhales.com")
+    uw_mode = os.environ.get("UW_MODE", "poll")
+    return {
+        "ok": True,
+        "unusual_whales": {
+            "enabled": uw_enabled,
+            "configured": bool(uw_api_key),
+            "mode": uw_mode,
+            "base_url": uw_base_url,
+            "coming_soon": not uw_enabled,
+        },
+    }
+
+
+@APP.get("/uw/health")
+async def uw_health(user=Depends(require_user)):
+    uw_enabled = os.environ.get("UW_ENABLED", "0").strip() in ("1", "true", "yes")
+    uw_api_key = os.environ.get("UW_API_KEY", "").strip()
+    if not uw_enabled:
+        return {"ok": True, "enabled": False, "message": "UW integration is disabled (UW_ENABLED=0)"}
+    if not uw_api_key:
+        return {"ok": False, "enabled": True, "error": "missing api key — set UW_API_KEY"}
+    # UW is enabled and configured — live health check not yet implemented
+    return {"ok": True, "enabled": True, "configured": True, "message": "UW configured but live health check not yet implemented"}
+
+
+# ----------------------------
 # Entrypoint
 # ----------------------------
 def main():

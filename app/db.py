@@ -108,3 +108,33 @@ def init_db():
           notes TEXT
         )
         """)
+
+        # --- Unusual Whales integration tables (always created, only used when UW_ENABLED=1) ---
+
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS integrations_state (
+          key TEXT PRIMARY KEY,
+          value TEXT,
+          updated_at TEXT NOT NULL
+        )
+        """)
+
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS uw_events (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          ts TEXT NOT NULL,
+          ticker TEXT NOT NULL,
+          exp TEXT,
+          strike REAL,
+          opt_type TEXT,
+          premium REAL,
+          size INTEGER,
+          bid REAL,
+          ask REAL,
+          price REAL,
+          flags_json TEXT,
+          raw_json TEXT
+        )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_uw_events_ts ON uw_events(ts)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_uw_events_ticker_ts ON uw_events(ticker, ts)")

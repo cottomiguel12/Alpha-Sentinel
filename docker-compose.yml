@@ -12,6 +12,8 @@ services:
       DB_PATH: /data/sentinel.db
       LOG_PATH: /logs/sentinel.log
       API_PORT: "8001"
+      UW_ENABLED: "0"
+      UW_BASE_URL: "https://api.unusualwhales.com"
     volumes:
       - ./data:/data
       - sentinel_logs:/logs
@@ -34,6 +36,12 @@ services:
       MAX_ALERTS_PER_TICK: "25"
       REPLAY_FROM_START: "0"
       WATCHLIST_REFRESH_SEC: "5"
+      UW_ENABLED: "0"
+      UW_API_KEY: ""
+      UW_BASE_URL: "https://api.unusualwhales.com"
+      UW_MODE: "poll"
+      UW_POLL_SEC: "2"
+      UW_RATE_LIMIT_SLEEP: "0.25"
     volumes:
       - ./data:/data
       - ./config:/app/config:ro

@@ -13,6 +13,14 @@ Env:
   AGENT_INTERVAL_SEC=1.5                         (optional)
   MAX_ALERTS_PER_TICK=25                         (optional)
   STATE_PATH=/data/agent_state.json              (optional)
+
+  # Unusual Whales (feature-flagged, default OFF)
+  UW_ENABLED=0                                   (set to 1 to enable)
+  UW_API_KEY=                                    (required when UW_ENABLED=1)
+  UW_BASE_URL=https://api.unusualwhales.com      (optional)
+  UW_MODE=poll                                   (optional: poll|stream)
+  UW_POLL_SEC=2                                  (optional)
+  UW_RATE_LIMIT_SLEEP=0.25                       (optional)
 """
 
 from __future__ import annotations
@@ -440,6 +448,16 @@ class SentinelAgent:
         if replay_from_start:
             ...
 
+        # Provider selection (UW > CSV > Mock)
+        # Import here to avoid circular imports at module load time
+        try:
+            from app.providers import select_provider
+            self.provider = select_provider(self)
+        except Exception as exc:
+            self._log(f"provider init failed ({exc}), defaulting to CSVProvider/MockProvider")
+            from app.providers import CSVProvider, MockProvider
+            self.provider = CSVProvider(self) if self.csv_path else MockProvider(self)
+
     def _log(self, msg: str) -> None:
         print(f"[AGENT] {msg}", flush=True)
 
@@ -700,12 +718,12 @@ class SentinelAgent:
             )
 
     def tick(self) -> None:
-        # Read new CSV lines (if configured)
-        alerts = self._read_csv_new()
-
-        # If no CSV configured -> generate some mock traffic
-        if not self.csv_path:
-            alerts = [_mock_alert() for _ in range(min(3, self.max_alerts_per_tick))]
+        # Fetch new alerts from the active provider (CSV / Mock / UnusualWhales)
+        try:
+            alerts = self.provider.fetch()
+        except Exception as exc:
+            self._log(f"provider.fetch() error ({exc}), skipping tick alerts")
+            alerts = []
 
         inserted = self._insert_alerts(alerts)
         mon_updates = self._upsert_monitor_for_watchlist()
