@@ -323,11 +323,12 @@ async def monitor(user=Depends(require_user)):
         rows = conn.execute(
             """
             SELECT m.*,
-                   CASE WHEN w.is_active=1 THEN 1 ELSE 0 END AS is_aoi
+                   1 AS is_aoi
             FROM monitor m
-            LEFT JOIN watchlist w
+            INNER JOIN watchlist w
               ON w.contract_key = m.contract_key
-            ORDER BY is_aoi DESC, m.current_score DESC
+            WHERE w.is_active = 1
+            ORDER BY m.current_score DESC
             LIMIT ?
             """,
             (MONITOR_MAX,),
