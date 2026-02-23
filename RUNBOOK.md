@@ -14,7 +14,7 @@ Wait until the command completes and says the build/recreate and restart steps a
 
 ## Verification
 
-After deployment, you can verify the status directly on the VPS via read-only commands:
+After deployment, you can verify the status directly on the VPS via read-only commands: 
 
 ### Verify Dashboard Infrastructure
 ```bash
