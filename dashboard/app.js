@@ -57,10 +57,15 @@ async function fetchApi(endpoint, opts = {}) {
 
 // ── Health ────────────────────────────────────────────────────────────────────
 async function updateHealth() {
-    const data = await fetchApi('/health');
+    const [data, uw] = await Promise.all([fetchApi('/health'), fetchApi('/uw/status')]);
     if (data?.ok) {
         const el = document.getElementById('health-ts');
         if (el) el.textContent = `Updated ${formatDate(new Date())}`;
+    }
+    const badge = document.getElementById('uw-badge');
+    if (badge) {
+        if (uw && !uw.enabled) badge.classList.remove('hidden');
+        else badge.classList.add('hidden');
     }
 }
 
@@ -604,8 +609,8 @@ async function loadMarketTide(isBackground = false) {
         document.getElementById('regime-label').textContent = 'Loading...';
     }
 
-    const integrations = await fetchApi('/integrations');
-    const isReady = integrations && integrations.market_tide !== 'DISABLED';
+    const status = await fetchApi('/uw/status');
+    const isReady = status && status.enabled;
 
     if (!isReady) {
         activeEl.classList.add('hidden');
@@ -616,30 +621,29 @@ async function loadMarketTide(isBackground = false) {
     activeEl.classList.remove('hidden');
     disabledEl.classList.add('hidden');
 
-    const state = await fetchApi('/market-tide/current');
-    if (state && state.regime) {
-        document.getElementById('regime-label').textContent = state.regime.regime || '—';
-        document.getElementById('regime-conf').textContent = state.regime.confidence != null ? state.regime.confidence.toFixed(1) : '—';
-        document.getElementById('regime-index').textContent = state.regime.tide_index != null ? state.regime.tide_index.toFixed(1) : '—';
-        document.getElementById('regime-bias').textContent = state.regime.bias_1m != null ? formatCurrency(state.regime.bias_1m) : '—';
-        document.getElementById('stat-slope').textContent = state.regime.slope_1m != null ? state.regime.slope_1m.toFixed(1) : '—';
-        document.getElementById('stat-accel').textContent = state.regime.accel_1m != null ? state.regime.accel_1m.toFixed(1) : '—';
-        document.getElementById('regime-time').textContent = formatDate(state.regime.ts);
+    const [tide1m, tide5m] = await Promise.all([
+        fetchApi('/uw/tide/latest?interval=1m'),
+        fetchApi('/uw/tide/latest?interval=5m')
+    ]);
 
-        let rc = 'chip-neutral';
-        if (state.regime.regime === 'Bull Market') rc = 'chip-green';
-        if (state.regime.regime === 'Bear Market') rc = 'chip-red';
-        if (state.regime.regime === 'Chop / Unconfirmed') rc = 'chip-yellow';
+    const hasData = (tide1m?.items?.length > 0) || (tide5m?.items?.length > 0);
+    const container = document.getElementById('tide-series-container');
 
-        const rLabel = document.getElementById('regime-label');
-        rLabel.className = `sc-val chip ${rc} text-[11px] font-bold px-2 py-0.5 ml-1 inline-flex`;
-
-        const container = document.getElementById('tide-series-container');
+    if (!hasData) {
+        if (container) {
+            container.innerHTML = `
+                <div class="flex flex-col items-center">
+                    <span class="material-symbols-outlined text-4xl text-primary mb-2">info</span>
+                    <span>No tide data yet</span>
+                </div>
+            `;
+        }
+    } else {
         if (container) {
             container.innerHTML = `
                 <div class="flex flex-col items-center">
                     <span class="material-symbols-outlined text-4xl text-primary mb-2">monitoring</span>
-                    <span>Provider Active: ${integrations.market_tide}</span>
+                    <span>Data Available: 1m (${tide1m?.items?.length || 0}) 5m (${tide5m?.items?.length || 0})</span>
                 </div>
             `;
         }

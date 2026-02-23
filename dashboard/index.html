@@ -303,7 +303,23 @@
 
         /* ── Filter bar ────────────────────────────────────────────── */
         .filter-bar {
-            padding: 0 16px 10px;
+            padding: 10px 16px;
+            position: sticky;
+            top: var(--header-h);
+            background: rgba(13, 17, 23, 0.95);
+            backdrop-filter: blur(8px);
+            z-index: 40;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 12px;
+        }
+
+        @media (min-width: 431px) {
+            .filter-bar {
+                top: calc(var(--header-h) + 43px);
+                /* Approx nav height */
+                border-bottom: none;
+                margin-bottom: 0;
+            }
         }
 
         .filter-toggle-row {
@@ -1089,6 +1105,16 @@
         .recent-alert-item.has-detail {
             cursor: pointer;
         }
+
+        .mobile-only {
+            display: block;
+        }
+
+        @media (min-width: 431px) {
+            .mobile-only {
+                display: none;
+            }
+        }
     </style>
 </head>
 
@@ -1109,6 +1135,9 @@
             <div class="header-status" style="margin-left:4px">
                 <span class="status-dot pulse"></span>
                 <span class="hidden sm:inline">Live</span>
+                <span id="uw-badge"
+                    class="hidden ml-2 text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 uppercase font-bold tracking-widest border border-amber-500/30">UW
+                    Coming Soon</span>
                 <span id="health-ts" style="font-size:9px;margin-left:4px"></span>
             </div>
         </div>
@@ -1186,6 +1215,14 @@
                                 <input id="filter-symbol" type="text" placeholder="Search ticker…" autocorrect="off"
                                     autocapitalize="none" />
                             </div>
+                            <div class="filter-sort-group mobile-only" style="padding-left:4px">
+                                <button id="mobile-sort-score" class="type-filter-btn"
+                                    style="border-radius:6px;gap:4px;display:flex;align-items:center;padding:6px 10px;min-height:36px"
+                                    title="Sort by Score">
+                                    <span class="material-symbols-outlined text-[18px]">sort</span>
+                                    Score
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1200,7 +1237,7 @@
                     <table id="alerts-table">
                         <thead>
                             <tr>
-                                <th>Time</th>
+                                <th>Trade Time</th>
                                 <th>Ticker</th>
                                 <th>Contract</th>
                                 <th class="text-right">Premium</th>

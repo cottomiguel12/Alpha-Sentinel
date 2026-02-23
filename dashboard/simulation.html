@@ -622,6 +622,16 @@
             </div>
         </div>
 
+        <!-- Live Sim Stream -->
+        <div class="card-panel">
+            <h3 class="text-sm font-bold text-white mb-2">Simulated Live Stream</h3>
+            <p class="text-[11px] text-muted mb-4 opacity-80">Displaying alerts injected via simulation worker
+                (source='SIM').</p>
+            <div id="sim-alerts-container" class="space-y-1.5 max-h-[400px] overflow-y-auto pr-2 custom-scroll">
+                <p class="empty-state text-[11px]">Waiting for sim activity...</p>
+            </div>
+        </div>
+
     </div>
 
     <!-- Bottom nav (mobile) -->
@@ -825,12 +835,37 @@
             else bar.style.background = '#f87171';
         }
 
+        async function fetchSimAlerts() {
+            const data = await fetchApi('/sim/alerts?limit=25');
+            const container = document.getElementById('sim-alerts-container');
+            if (data && data.items && data.items.length) {
+                container.innerHTML = '';
+                data.items.forEach(alert => {
+                    const row = document.createElement('div');
+                    row.className = 'text-[11px] p-2 bg-[var(--surface2)] rounded flex justify-between items-center border border-[var(--border)] border-l-[3px] shadow-sm transition-all hover:opacity-80';
+                    row.style.borderLeftColor = alert.opt_type === 'C' ? '#34d399' : '#f87171';
+                    row.innerHTML = `
+                        <span class="text-slate-400 font-mono w-14 shrink-0">${formatDate(alert.ts)}</span>
+                        <span class="text-white font-bold w-14 shrink-0 truncate">${alert.ticker}</span>
+                        <span class="text-muted w-14 shrink-0 truncate">$${alert.strike}${alert.opt_type}</span>
+                        <span class="font-bold w-14 text-right shrink-0">$${(alert.premium / 1000).toFixed(1)}k</span>
+                        <span class="text-white font-bold w-12 text-center ml-2 shrink-0 chip ${scoreColor(alert.score_total)}">${alert.score_total.toFixed(1)}</span>
+                    `;
+                    container.appendChild(row);
+                });
+            } else {
+                container.innerHTML = '<p class="empty-state text-[11px]">Waiting for sim activity...</p>';
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             fetchSimState();
             fetchSourceEnv();
             fetchFilterStats();
+            fetchSimAlerts();
             setInterval(fetchSimState, 2000);    // 2s polling
             setInterval(fetchFilterStats, 3000); // 3s polling
+            setInterval(fetchSimAlerts, 5000);   // 5s polling for alerts
         });
     </script>
 </body>
