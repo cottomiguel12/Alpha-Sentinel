@@ -4,8 +4,8 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="description" content="Alpha Sentinel – Monitor tracked contracts in real-time" />
-    <title>Alpha Sentinel – Monitor</title>
+    <meta name="description" content="Alpha Sentinel – Institutional options flow monitoring dashboard" />
+    <title>Alpha Sentinel – Market Tide MAX</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
@@ -21,7 +21,6 @@
             }
         };
     </script>
-    <!-- Shared CSS with index.html (inlined for simplicity) -->
     <style>
         :root {
             --primary: #3c83f6;
@@ -273,7 +272,7 @@
         .status-ribbon {
             display: grid;
             gap: 8px;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             padding: 12px 16px;
         }
 
@@ -332,215 +331,6 @@
             margin-top: 2px;
         }
 
-        .section-header .refresh-hint {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 11px;
-            color: var(--muted);
-        }
-
-        /* ── Monitor cards (mobile ≤ 430px) ──────────── */
-        #monitor-cards {
-            padding: 0 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        @media (min-width: 431px) {
-            #monitor-cards {
-                display: none;
-            }
-        }
-
-        .monitor-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .monitor-card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .monitor-ticker {
-            font-size: 15px;
-            font-weight: 700;
-            color: #fff;
-        }
-
-        .monitor-contract {
-            font-size: 11px;
-            color: var(--muted);
-        }
-
-        .monitor-scores {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 4px;
-        }
-
-        .monitor-card-footer {
-            border-top: 1px solid var(--border);
-            padding-top: 6px;
-        }
-
-        /* ── Monitor table (desktop ≥ 431px) ─────────── */
-        .monitor-table-wrap {
-            display: none;
-            overflow-x: auto;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            background: var(--surface);
-            margin: 0 16px;
-        }
-
-        @media (min-width: 431px) {
-            .monitor-table-wrap {
-                display: block;
-            }
-        }
-
-        .monitor-table-wrap table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .monitor-table-wrap thead tr {
-            background: rgba(31, 41, 55, .7);
-            border-bottom: 1px solid var(--border);
-        }
-
-        .monitor-table-wrap th {
-            padding: 10px 20px;
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            white-space: nowrap;
-        }
-
-        .tbl-row {
-            transition: background .1s;
-        }
-
-        .tbl-row:hover {
-            background: rgba(255, 255, 255, .03);
-        }
-
-        /* ── Shared ───────────────────────────────────── */
-        .chip {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2px 7px;
-            border-radius: 100px;
-            border: 1px solid transparent;
-            font-size: 11px;
-            font-weight: 700;
-            white-space: nowrap;
-            letter-spacing: 0.02em;
-        }
-
-        .chip-green {
-            background: rgba(16, 185, 129, .15);
-            border-color: rgba(16, 185, 129, .3);
-            color: #34d399;
-        }
-
-        .chip-yellow {
-            background: rgba(245, 158, 11, .12);
-            border-color: rgba(245, 158, 11, .3);
-            color: #fbbf24;
-        }
-
-        .chip-neutral {
-            background: var(--surface2);
-            border-color: var(--border);
-            color: #94a3b8;
-        }
-
-        .chip-blue {
-            background: rgba(60, 131, 246, .15);
-            border-color: rgba(60, 131, 246, .3);
-            color: var(--primary);
-        }
-
-        .stat-cell {
-            display: flex;
-            flex-direction: column;
-            gap: 1px;
-        }
-
-        .stat-label {
-            font-size: 10px;
-            font-weight: 600;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .stat-val {
-            font-size: 13px;
-            font-weight: 600;
-            color: #cbd5e1;
-        }
-
-        .ticker-icon {
-            width: 30px;
-            height: 30px;
-            border-radius: 6px;
-            flex-shrink: 0;
-            background: rgba(60, 131, 246, .12);
-            border: 1px solid rgba(60, 131, 246, .2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 9px;
-            font-weight: 800;
-            color: var(--primary);
-        }
-
-        .btn-remove {
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: var(--muted);
-            display: flex;
-            align-items: center;
-            min-width: 32px;
-            min-height: 32px;
-            justify-content: center;
-            transition: color .15s;
-        }
-
-        .btn-remove:hover {
-            color: #f87171;
-        }
-
-        .sparkline-mini {
-            width: 64px;
-            height: 24px;
-            display: flex;
-            align-items: flex-end;
-            gap: 2px;
-        }
-
-        .empty-state {
-            text-align: center;
-            color: var(--muted);
-            font-size: 13px;
-            padding: 40px 16px;
-        }
-
         .empty-state-block {
             display: flex;
             flex-direction: column;
@@ -548,20 +338,7 @@
             justify-content: center;
             padding: 48px 16px;
             color: var(--muted);
-        }
-
-        ::-webkit-scrollbar {
-            width: 5px;
-            height: 5px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 10px;
+            text-align: center;
         }
     </style>
 </head>
@@ -588,7 +365,6 @@
         <div style="display:flex;align-items:center;gap:8px">
             <div class="user-pill">
                 <span class="user-email" style="font-size:12px;color:#94a3b8"></span>
-                <span class="chip chip-blue user-role" style="font-size:9px"></span>
             </div>
             <button class="btn-logout-compact logout-btn">
                 <span class="material-symbols-outlined">logout</span>
@@ -602,63 +378,82 @@
         <a href="/" id="nav-alerts">
             <span class="material-symbols-outlined">notifications_active</span>Alerts
         </a>
-        <a href="/monitor.html" class="active" id="nav-monitors">
+        <a href="/monitor.html" id="nav-monitors">
             <span class="material-symbols-outlined">monitoring</span>Monitor
         </a>
-        <a href="/market_tide.html" id="nav-market-tide">
+        <a href="/market_tide.html" class="active" id="nav-market-tide">
             <span class="material-symbols-outlined">waves</span>Market Tide <span
                 class="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-primary/20 text-primary uppercase font-bold tracking-widest border border-primary/30">MAX</span>
+        </a>
+        <a href="/simulation.html" id="nav-sim">
+            <span class="material-symbols-outlined">play_circle</span>Simulator
         </a>
     </nav>
 
     <div class="page-content">
-        <!-- Status ribbon -->
-        <div class="status-ribbon">
-            <div class="stat-card"><span class="sc-label">Agent</span><span class="sc-val"
-                    style="color:#34d399">Active</span></div>
-            <div class="stat-card"><span class="sc-label">Feed</span><span class="sc-val"
-                    style="color:#3c83f6">Live</span></div>
-            <div class="stat-card"><span class="sc-label">Contracts</span><span class="sc-val"
-                    id="monitor-count">—</span></div>
-            <div class="stat-card"><span class="sc-label">Last Update</span><span class="sc-val">—</span></div>
-        </div>
-
-        <!-- Section heading -->
-        <div class="section-header">
-            <div>
-                <h1>Active Monitor</h1>
-                <p>Tracked contracts — auto-refreshes every 5s</p>
+        <!-- ── Market Tide (Tide View) ──────────────────────────────────────────────── -->
+        <div id="tide-active" class="hidden">
+            <div class="section-header">
+                <div>
+                    <h1>Market Tide MAX Overview</h1>
+                    <p>Aggregated options order flow trend analysis representing broader predictive volume signals.</p>
+                </div>
             </div>
-            <div class="refresh-hint">
-                <span class="material-symbols-outlined" style="font-size:14px">update</span>
-                <span>Live</span>
+
+            <div class="status-ribbon mt-2">
+                <div class="stat-card"><span class="sc-label">Regime</span><span class="sc-val"
+                        id="regime-label">—</span></div>
+                <div class="stat-card"><span class="sc-label">Confidence</span><span class="sc-val"
+                        id="regime-conf">--</span></div>
+                <div class="stat-card"><span class="sc-label">Tide Index</span><span class="sc-val"
+                        id="regime-index">--</span></div>
+                <div class="stat-card"><span class="sc-label">Bias</span><span class="sc-val" id="regime-bias">--</span>
+                </div>
+                <div class="stat-card"><span class="sc-label">Slope</span><span class="sc-val" id="stat-slope">--</span>
+                </div>
+                <div class="stat-card"><span class="sc-label">Acceleration</span><span class="sc-val"
+                        id="stat-accel">--</span></div>
+                <div class="stat-card"><span class="sc-label">Last Snapshot</span><span class="sc-val"
+                        id="regime-time">--</span></div>
+            </div>
+
+            <div class="mx-4 mt-6 p-6 rounded-xl border border-border bg-surface relative overflow-hidden group">
+                <div
+                    class="absolute right-0 top-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3">
+                </div>
+                <h3 class="text-lg font-bold text-white mb-2">Live Tracking Active</h3>
+                <p class="text-sm text-muted mb-6">Market Tide is sampling cumulative options depth across all primary
+                    exchanges and applying standard deviation boundaries for index resolution.</p>
+
+                <div id="tide-series-container"
+                    class="w-full h-48 border border-border bg-surface2 rounded-lg flex items-center justify-center text-muted text-sm font-semibold relative overflow-hidden">
+                    <!-- Graph visualization elements go here later -->
+                    Initializing visual canvas...
+                </div>
             </div>
         </div>
 
-        <!-- ── Monitor cards (mobile) ────────────────────────────── -->
-        <div id="monitor-cards" aria-label="Monitor list" role="feed">
-            <p class="empty-state">Loading…</p>
+        <div id="tide-disabled" class="hidden">
+            <div class="empty-state-block pt-32 pb-32">
+                <div class="relative w-20 h-20 flex items-center justify-center mb-6">
+                    <div class="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse"></div>
+                    <span class="material-symbols-outlined relative z-10"
+                        style="font-size: 48px; color: var(--primary);">waves</span>
+                </div>
+                <h2
+                    style="font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 12px; letter-spacing: -0.02em;">
+                    Market Tide MAX is Coming Soon</h2>
+                <p style="max-width: 460px; line-height: 1.6; font-size: 15px;">We are actively integrating with Unusual
+                    Whales to bring you institutional-grade market tide analytics directly into the Alpha Sentinel
+                    ecosystem. Expect broader trend visibility, deeper volume indicators, and predictive regime shifts.
+                </p>
+                <div
+                    class="mt-8 px-4 py-2 border border-border bg-surface rounded-full text-xs font-semibold uppercase tracking-widest text-muted">
+                    V 2.5 Access Required
+                </div>
+            </div>
         </div>
 
-        <!-- ── Monitor table (desktop) ──────────────────────────── -->
-        <div class="monitor-table-wrap" role="region" aria-label="Monitor table">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Contract</th>
-                        <th>Entry Score</th>
-                        <th>Current Score</th>
-                        <th>Peak Score</th>
-                        <th>Δ Peak</th>
-                        <th>Trend</th>
-                        <th>Status</th>
-                        <th>Last Update</th>
-                        <th class="text-right" style="width:60px">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="monitor-tbody" class="divide-y divide-slate-800/50"></tbody>
-            </table>
-        </div>
     </div><!-- /.page-content -->
 
     <!-- ── Bottom nav (≤ 430px) ─────────────────────────────────── -->
@@ -667,13 +462,17 @@
             <span class="material-symbols-outlined">notifications_active</span>
             Alerts
         </a>
-        <a href="/monitor.html" class="active" aria-current="page">
+        <a href="/monitor.html">
             <span class="material-symbols-outlined">monitoring</span>
             Monitor
         </a>
-        <a href="/market_tide.html">
+        <a href="/market_tide.html" class="active" aria-current="page">
             <span class="material-symbols-outlined">waves</span>
             Tide
+        </a>
+        <a href="/simulation.html">
+            <span class="material-symbols-outlined">play_circle</span>
+            Sim
         </a>
     </nav>
 

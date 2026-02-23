@@ -224,7 +224,7 @@
         /* ── Bottom nav (mobile only) ──────────────────────────────── */
         .bottom-nav {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(4, 1fr);
             position: fixed;
             bottom: 0;
             left: 0;
@@ -921,6 +921,13 @@
         <a href="/monitor.html" id="nav-monitors">
             <span class="material-symbols-outlined">monitoring</span>Monitor
         </a>
+        <a href="/market_tide.html" id="nav-market-tide">
+            <span class="material-symbols-outlined">waves</span>Market Tide <span
+                class="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-primary/20 text-primary uppercase font-bold tracking-widest border border-primary/30">MAX</span>
+        </a>
+        <a href="/simulation.html" id="nav-sim">
+            <span class="material-symbols-outlined">play_circle</span>Simulator
+        </a>
     </nav>
 
     <div class="page-content">
@@ -1031,6 +1038,10 @@
         <a href="/monitor.html">
             <span class="material-symbols-outlined">monitoring</span>
             Monitor
+        </a>
+        <a href="/market_tide.html">
+            <span class="material-symbols-outlined">waves</span>
+            Tide
         </a>
     </nav>
 

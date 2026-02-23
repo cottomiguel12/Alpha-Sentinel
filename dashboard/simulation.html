@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Alpha Sentinel – Institutional options flow monitoring dashboard" />
+    <title>Alpha Sentinel – Simulation</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { primary: '#3c83f6', 'bg-dark': '#0d1117' },
+                    fontFamily: { display: ['Inter', 'sans-serif'] }
+                }
+            }
+        };
+    </script>
+    <style>
+        :root {
+            --primary: #3c83f6;
+            --bg: #0d1117;
+            --surface: #161b22;
+            --surface2: #1f2937;
+            --border: #2d3748;
+            --text: #e2e8f0;
+            --muted: #64748b;
+            --header-h: 52px;
+            --nav-h: 56px;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        html {
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100dvh;
+            overflow-x: hidden;
+        }
+
+        /* ── Core Layout Classes Copied From index.html ── */
+        .site-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            height: var(--header-h);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-brand .logo-icon {
+            width: 28px;
+            height: 28px;
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .header-brand .brand-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -0.01em;
+        }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, .25);
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0.4
+            }
+        }
+
+        .btn-logout-compact {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            min-height: 32px;
+            transition: color .15s, background .15s;
+        }
+
+        .btn-logout-compact:hover {
+            color: #f87171;
+            background: rgba(248, 113, 113, .08);
+        }
+
+        .btn-logout-compact .material-symbols-outlined {
+            font-size: 16px;
+        }
+
+        .btn-logout-compact .logout-label {
+            display: none;
+        }
+
+        @media (min-width: 360px) {
+            .btn-logout-compact .logout-label {
+                display: inline;
+            }
+        }
+
+        .user-pill {
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .user-pill {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 12px;
+                color: var(--muted);
+            }
+        }
+
+        /* ── Navs ── */
+        .tab-nav {
+            display: none;
+        }
+
+        @media (min-width: 431px) {
+            .tab-nav {
+                display: flex;
+                border-bottom: 1px solid var(--border);
+                padding: 0 16px;
+                background: var(--bg);
+            }
+
+            .tab-nav a {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 10px 16px;
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--muted);
+                border-bottom: 2px solid transparent;
+                transition: color .15s, border-color .15s;
+                text-decoration: none;
+            }
+
+            .tab-nav a.active,
+            .tab-nav a:hover {
+                color: #fff;
+            }
+
+            .tab-nav a.active {
+                border-bottom-color: var(--primary);
+            }
+
+            .tab-nav a .material-symbols-outlined {
+                font-size: 18px;
+            }
+        }
+
+        .bottom-nav {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            height: var(--nav-h);
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+        }
+
+        .bottom-nav a {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--muted);
+            transition: color .15s;
+        }
+
+        .bottom-nav a.active {
+            color: var(--primary);
+        }
+
+        .bottom-nav a .material-symbols-outlined {
+            font-size: 22px;
+        }
+
+        @media (min-width: 431px) {
+            .bottom-nav {
+                display: none;
+            }
+        }
+
+        /* ── Page Content ── */
+        .page-content {
+            max-width: 1440px;
+            margin: 0 auto;
+            width: 100%;
+            padding-bottom: calc(var(--nav-h) + 8px);
+        }
+
+        @media (min-width: 431px) {
+            .page-content {
+                padding-bottom: 32px;
+            }
+        }
+
+        .section-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            padding: 16px 16px 10px;
+        }
+
+        .section-header h1 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        @media (min-width: 768px) {
+            .section-header h1 {
+                font-size: 20px;
+            }
+        }
+
+        .section-header p {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        /* ── Custom Sim Styles ── */
+        .card-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin: 0 16px 16px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .input-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .input-group input {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary);
+        }
+
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--muted);
+        }
+
+        .btn-danger {
+            background: rgba(244, 63, 94, 0.1);
+            border: 1px solid rgba(244, 63, 94, 0.2);
+            color: #f43f5e;
+        }
+
+        .btn-danger:hover {
+            background: rgba(244, 63, 94, 0.2);
+        }
+
+        /* Toast Notification */
+        #toast-container {
+            position: fixed;
+            top: calc(var(--header-h) + 16px);
+            right: 16px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        }
+
+        .alert-toast {
+            background: var(--surface);
+            border: 1px solid var(--primary);
+            box-shadow: 0 4px 12px rgba(60, 131, 246, 0.15);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 250px;
+            transform: translateX(120%);
+            transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+
+        .alert-toast.show {
+            transform: translateX(0);
+        }
+
+        .stat-value {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="site-header">
+        <div class="header-brand">
+            <svg class="logo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M36.7273 44C33.9891 44 31.6043 39.8386 30.3636 33.69C29.123 39.8386 26.7382 44 24 44
+                 C21.2618 44 18.877 39.8386 17.6364 33.69C16.3957 39.8386 14.0109 44 11.2727 44
+                 C7.25611 44 4 35.0457 4 24C4 12.9543 7.25611 4 11.2727 4C14.0109 4 16.3957 8.16144
+                 17.6364 14.31C18.877 8.16144 21.2618 4 24 4C26.7382 4 29.123 8.16144 30.3636 14.31
+                 C31.6043 8.16144 33.9891 4 36.7273 4C40.7439 4 44 12.9543 44 24C44 35.0457 40.7439 44 36.7273 44Z"
+                    fill="currentColor" />
+            </svg>
+            <span class="brand-name">Alpha Sentinel</span>
+            <div class="header-status" style="margin-left:4px">
+                <span class="status-dot pulse" id="sim-pulse"
+                    style="background: var(--muted); box-shadow: none;"></span>
+                <span id="health-ts" style="font-size:9px;margin-left:4px">SIM: UNKNOWN</span>
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+            <div class="user-pill">
+                <span class="user-email" style="font-size:12px;color:#94a3b8"></span>
+            </div>
+            <button class="btn-logout-compact logout-btn">
+                <span class="material-symbols-outlined">logout</span>
+                <span class="logout-label">Logout</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Tab nav (desktop) -->
+    <nav class="tab-nav" aria-label="Main navigation">
+        <a href="/" id="nav-alerts">
+            <span class="material-symbols-outlined">notifications_active</span>Alerts
+        </a>
+        <a href="/monitor.html" id="nav-monitors">
+            <span class="material-symbols-outlined">monitoring</span>Monitor
+        </a>
+        <a href="/market_tide.html" id="nav-market-tide">
+            <span class="material-symbols-outlined">waves</span>Market Tide <span
+                class="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-primary/20 text-primary uppercase font-bold tracking-widest border border-primary/30">MAX</span>
+        </a>
+        <a href="/simulation.html" class="active" id="nav-sim">
+            <span class="material-symbols-outlined">play_circle</span>Simulator
+        </a>
+    </nav>
+
+    <div class="page-content">
+        <div class="section-header">
+            <div>
+                <h1>Data Feed Simulator</h1>
+                <p>Live replay engine controls and environment injection.</p>
+            </div>
+        </div>
+
+        <!-- Metric Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 px-4 mb-4">
+            <div class="card-panel m-0 flex flex-col items-center justify-center p-4">
+                <span class="stat-label">Simulator Status</span>
+                <span class="stat-value mt-1" id="ui-sim-status" style="color: var(--muted);">STOPPED</span>
+            </div>
+            <div class="card-panel m-0 flex flex-col items-center justify-center p-4">
+                <span class="stat-label">Active Cursor ID</span>
+                <span class="stat-value mt-1" id="ui-sim-cursor">0</span>
+            </div>
+            <div class="card-panel m-0 flex flex-col items-center justify-center p-4">
+                <span class="stat-label">Alerts In Stream</span>
+                <span class="stat-value mt-1 text-primary" id="ui-sim-count">0</span>
+            </div>
+            <div class="card-panel m-0 flex flex-col items-center justify-center p-4">
+                <span class="stat-label">API Data Source</span>
+                <span class="stat-value mt-1 text-emerald-400" id="ui-sim-source">Loading...</span>
+            </div>
+        </div>
+
+        <!-- Controls & Configuration Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-0">
+            <!-- Global Controls -->
+            <div class="card-panel">
+                <h3 class="text-white font-semibold text-sm mb-4 border-b border-border pb-2">Engine Controls</h3>
+
+                <div class="flex flex-wrap gap-2 mb-6">
+                    <button id="btn-start" class="btn-action btn-primary flex-1 min-w-[100px]" onclick="simStart()">
+                        <span class="material-symbols-outlined text-[18px]">play_arrow</span> Start
+                    </button>
+                    <button id="btn-pause" class="btn-action btn-secondary flex-1 min-w-[100px]" onclick="simPause()">
+                        <span class="material-symbols-outlined text-[18px]">pause</span> Pause
+                    </button>
+                    <button id="btn-stop" class="btn-action btn-secondary flex-1 min-w-[100px]" onclick="simStop()">
+                        <span class="material-symbols-outlined text-[18px]">stop</span> Stop
+                    </button>
+                </div>
+
+                <h3 class="text-rose-400 font-semibold text-sm mb-4 border-b border-rose-500/20 pb-2">Danger Zone</h3>
+                <div class="flex gap-2">
+                    <button class="btn-action btn-danger flex-1" onclick="simReset()">
+                        <span class="material-symbols-outlined text-[18px]">restart_alt</span> Hard Reset Stream
+                    </button>
+                </div>
+                <p class="text-xs text-muted mt-2">Erases `alerts_live` table and resets cursor back to historical row
+                    1.</p>
+            </div>
+
+            <!-- Configuration -->
+            <div class="card-panel">
+                <h3 class="text-white font-semibold text-sm mb-4 border-b border-border pb-2">Injection Configuration
+                </h3>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="input-group">
+                        <label for="cfg-speed">Speed Per Tick (Rows)</label>
+                        <input type="number" id="cfg-speed" min="1" max="1000" value="25" />
+                    </div>
+                    <div class="input-group">
+                        <label for="cfg-interval">Interval (Seconds)</label>
+                        <input type="number" id="cfg-interval" step="0.1" min="0.1" max="60" value="1.0" />
+                    </div>
+                </div>
+
+                <div class="input-group mt-2">
+                    <label for="cfg-cursor">Override Cursor ID</label>
+                    <input type="number" id="cfg-cursor" min="1" placeholder="Leave empty for generic resume" />
+                </div>
+
+                <div class="mt-4 flex gap-2">
+                    <button class="btn-action btn-secondary w-full" onclick="simApplySettings()">
+                        <span class="material-symbols-outlined text-[18px]">save</span> Apply Hardware Config
+                    </button>
+                </div>
+            </div>
+
+            <!-- Toast Tester -->
+            <div class="card-panel md:col-span-2">
+                <h3 class="text-white font-semibold text-sm mb-4 border-b border-border pb-2">UI Diagnostics</h3>
+                <div class="flex gap-4 items-center">
+                    <button class="btn-action btn-secondary" onclick="simTestAlert()">
+                        <span class="material-symbols-outlined text-[18px]">bug_report</span> Fire Test Toast
+                    </button>
+                    <p class="text-xs text-muted">Injects a mock score 99 row to verify dashboard connectivity.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bottom nav (mobile) -->
+    <nav class="bottom-nav" aria-label="Mobile navigation">
+        <a href="/">
+            <span class="material-symbols-outlined">notifications_active</span>Alerts
+        </a>
+        <a href="/monitor.html">
+            <span class="material-symbols-outlined">monitoring</span>Monitor
+        </a>
+        <a href="/market_tide.html">
+            <span class="material-symbols-outlined">waves</span>Tide
+        </a>
+        <a href="/simulation.html" class="active">
+            <span class="material-symbols-outlined">play_circle</span>Sim
+        </a>
+    </nav>
+
+    <div id="toast-container"></div>
+
+    <script src="/app.js"></script>
+    <script>
+        // Local state
+        let simStateCache = null;
+
+        // Custom Simulator specific API polling
+        async function fetchSimState() {
+            const res = await fetchApi('/sim/status');
+            if (res && res.ok) {
+                simStateCache = res.state;
+
+                // Update specific UI metrics
+                document.getElementById('ui-sim-cursor').textContent = res.state.cursor_id;
+                document.getElementById('ui-sim-count').textContent = res.alerts_live_count;
+
+                // Form sync
+                if (document.activeElement !== document.getElementById('cfg-speed')) {
+                    document.getElementById('cfg-speed').value = res.state.speed_per_tick;
+                }
+                if (document.activeElement !== document.getElementById('cfg-interval')) {
+                    document.getElementById('cfg-interval').value = res.state.interval_sec;
+                }
+
+                const dot = document.getElementById('sim-pulse');
+                const label = document.getElementById('ui-sim-status');
+                const navLabel = document.getElementById('health-ts');
+
+                if (res.state.is_running === 1) {
+                    if (res.state.is_paused === 1) {
+                        dot.style.background = '#eab308'; // yellow
+                        dot.style.boxShadow = '0 0 0 2px rgba(234, 179, 8, .25)';
+                        label.textContent = 'PAUSED';
+                        label.style.color = '#eab308';
+                        navLabel.textContent = 'SIM: PAUSED';
+
+                        document.getElementById('btn-start').style.display = 'none';
+                        document.getElementById('btn-pause').style.display = 'none';
+                        document.getElementById('btn-stop').style.display = 'flex';
+                    } else {
+                        dot.style.background = '#10b981'; // green
+                        dot.style.boxShadow = '0 0 0 2px rgba(16, 185, 129, .25)';
+                        label.textContent = 'RUNNING';
+                        label.style.color = '#10b981';
+                        navLabel.textContent = 'SIM: ACTIVE';
+
+                        document.getElementById('btn-start').style.display = 'none';
+                        document.getElementById('btn-pause').style.display = 'flex';
+                        document.getElementById('btn-stop').style.display = 'flex';
+                    }
+                } else {
+                    dot.style.background = '#ef4444'; // red
+                    dot.style.boxShadow = '0 0 0 2px rgba(239, 68, 68, .25)';
+                    label.textContent = 'STOPPED';
+                    label.style.color = '#ef4444';
+                    navLabel.textContent = 'SIM: STOPPED';
+
+                    document.getElementById('btn-start').style.display = 'flex';
+                    document.getElementById('btn-pause').style.display = 'none';
+                    document.getElementById('btn-stop').style.display = 'none';
+                }
+            } else {
+                document.getElementById('ui-sim-status').textContent = 'ERROR / DOWN';
+                document.getElementById('ui-sim-status').style.color = '#ef4444';
+            }
+        }
+
+        // Actions
+        async function simStart() {
+            const body = {};
+            const speed = document.getElementById('cfg-speed').value;
+            const ivl = document.getElementById('cfg-interval').value;
+            const cur = document.getElementById('cfg-cursor').value;
+
+            if (speed) body.speed_per_tick = parseInt(speed);
+            if (ivl) body.interval_sec = parseFloat(ivl);
+            if (cur) body.cursor_id = parseInt(cur);
+
+            await fetchApi('/sim/start', { method: 'POST', body: JSON.stringify(body) });
+            fetchSimState();
+        }
+
+        async function simPause() {
+            await fetchApi('/sim/pause', { method: 'POST' });
+            fetchSimState();
+        }
+
+        async function simStop() {
+            await fetchApi('/sim/stop', { method: 'POST' });
+            fetchSimState();
+        }
+
+        async function simReset() {
+            if (!confirm('Are you sure you want to flush the simulation stream table?')) return;
+            await fetchApi('/sim/reset', { method: 'POST' });
+            fetchSimState();
+        }
+
+        async function simApplySettings() {
+            const body = {};
+            const speed = document.getElementById('cfg-speed').value;
+            const ivl = document.getElementById('cfg-interval').value;
+            const cur = document.getElementById('cfg-cursor').value;
+
+            if (speed) body.speed_per_tick = parseInt(speed);
+            if (ivl) body.interval_sec = parseFloat(ivl);
+            if (cur) body.cursor_id = parseInt(cur);
+
+            await fetchApi('/sim/settings', { method: 'POST', body: JSON.stringify(body) });
+            fetchSimState();
+        }
+
+        async function simTestAlert() {
+            const res = await fetchApi('/sim/test_alert', { method: 'POST' });
+            if (res && res.ok) {
+                const a = res.alert;
+                showToast(`TEST: ${a.ticker} $${a.strike}${a.opt_type} (${a.premium ? '$' + (a.premium / 1000).toFixed(1) + 'K' : ''}) SCORE: ${a.score_total}`);
+            }
+        }
+
+        function showToast(msg) {
+            const container = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = 'alert-toast';
+            t.innerHTML = `<span class="material-symbols-outlined text-primary">local_fire_department</span> <span>${msg}</span>`;
+            container.appendChild(t);
+
+            // Trigger animation
+            setTimeout(() => t.classList.add('show'), 10);
+
+            // Remove
+            setTimeout(() => {
+                t.classList.remove('show');
+                setTimeout(() => t.remove(), 300);
+            }, 5000);
+        }
+
+        // Live Environment Detection hook
+        async function fetchSourceEnv() {
+            // We can infer source dynamically by checking if a standard route returns alerts_live.
+            // But since we didn't expose /sim/source explicitly, we rely on checking the VPS proxy logs 
+            // and assume we know it via side channel, or if SIM data contains 'source' synthetic.
+            document.getElementById('ui-sim-source').textContent = "Refer to docker-compose ALERTS_SOURCE";
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchSimState();
+            fetchSourceEnv();
+            setInterval(fetchSimState, 2000); // 2s polling
+        });
+    </script>
+</body>
+
+</html>

@@ -271,9 +271,12 @@ async def alerts(
     sort_score: Optional[str] = None,
     user=Depends(require_user)
 ):
+    source_env = os.environ.get("ALERTS_SOURCE", "archive").strip().lower()
+    table_name = "alerts_live" if source_env == "live" else "alerts"
+
     limit = max(1, min(int(limit), 500))
 
-    query = "SELECT * FROM alerts"
+    query = f"SELECT * FROM {table_name}"
     conditions = []
     params = []
 
@@ -314,15 +317,18 @@ async def alerts(
 
 @APP.get("/alerts/recent")
 async def alerts_recent(window_sec: int = 900, limit: int = 15, user=Depends(require_user)):
+    source_env = os.environ.get("ALERTS_SOURCE", "archive").strip().lower()
+    table_name = "alerts_live" if source_env == "live" else "alerts"
+    
     limit = max(1, min(int(limit), 100))
     cutoff_dt = datetime.now(timezone.utc) - timedelta(seconds=window_sec)
     cutoff_iso = cutoff_dt.isoformat()
 
     with db() as conn:
         rows = conn.execute(
-            """
+            f"""
             SELECT *
-            FROM alerts
+            FROM {table_name}
             WHERE ts >= ?
             ORDER BY score_total DESC
             LIMIT ?
@@ -472,6 +478,134 @@ async def delete_watchlist(contract_key: str, user=Depends(require_role("sentine
     with db() as conn:
         conn.execute("DELETE FROM watchlist WHERE contract_key=?", (contract_key,))
     return {"ok": True, "deleted": contract_key}
+
+
+# ----------------------------
+# Simulation API
+# ----------------------------
+
+class SimSettingsIn(BaseModel):
+    speed_per_tick: Optional[int] = None
+    interval_sec: Optional[float] = None
+    cursor_id: Optional[int] = None
+
+
+@APP.get("/sim/status")
+async def get_sim_status(user=Depends(require_user)):
+    with db() as conn:
+        state = conn.execute("SELECT * FROM sim_state WHERE id=1").fetchone()
+        if not state:
+            return {"ok": False, "error": "sim_state not initialized"}
+            
+        count_row = conn.execute("SELECT COUNT(*) as c FROM alerts_live").fetchone()
+        return {
+            "ok": True, 
+            "state": dict(state),
+            "alerts_live_count": count_row["c"]
+        }
+
+
+@APP.post("/sim/start")
+async def start_sim(body: Optional[SimSettingsIn] = None, user=Depends(require_role("sentinel"))):
+    with db() as conn:
+        if body:
+            updates = []
+            params = []
+            if body.speed_per_tick is not None:
+                updates.append("speed_per_tick=?")
+                params.append(int(body.speed_per_tick))
+            if body.interval_sec is not None:
+                updates.append("interval_sec=?")
+                params.append(float(body.interval_sec))
+            if body.cursor_id is not None:
+                updates.append("cursor_id=?")
+                params.append(int(body.cursor_id))
+            
+            if updates:
+                query = "UPDATE sim_state SET " + ", ".join(updates) + " WHERE id=1"
+                conn.execute(query, tuple(params))
+                
+        conn.execute("UPDATE sim_state SET is_running=1, is_paused=0 WHERE id=1")
+    return {"ok": True, "message": "Simulation started"}
+
+
+@APP.post("/sim/pause")
+async def pause_sim(user=Depends(require_role("sentinel"))):
+    with db() as conn:
+        conn.execute("UPDATE sim_state SET is_paused=1 WHERE id=1")
+    return {"ok": True, "message": "Simulation paused"}
+
+
+@APP.post("/sim/resume")
+async def resume_sim(user=Depends(require_role("sentinel"))):
+    with db() as conn:
+        conn.execute("UPDATE sim_state SET is_paused=0 WHERE id=1")
+    return {"ok": True, "message": "Simulation resumed"}
+
+
+@APP.post("/sim/stop")
+async def stop_sim(user=Depends(require_role("sentinel"))):
+    with db() as conn:
+        conn.execute("UPDATE sim_state SET is_running=0, is_paused=0 WHERE id=1")
+    return {"ok": True, "message": "Simulation stopped"}
+
+
+@APP.post("/sim/reset")
+async def reset_sim(user=Depends(require_role("sentinel"))):
+    with db() as conn:
+        conn.execute("DELETE FROM alerts_live")
+        conn.execute("UPDATE sim_state SET cursor_id=1, last_tick_ts=NULL WHERE id=1")
+    return {"ok": True, "message": "Simulation data cleared and cursor reset"}
+
+
+@APP.post("/sim/settings")
+async def update_sim_settings(body: SimSettingsIn, user=Depends(require_role("sentinel"))):
+    with db() as conn:
+        updates = []
+        params = []
+        if body.speed_per_tick is not None:
+            updates.append("speed_per_tick=?")
+            params.append(int(body.speed_per_tick))
+        if body.interval_sec is not None:
+            updates.append("interval_sec=?")
+            params.append(float(body.interval_sec))
+        if body.cursor_id is not None:
+            updates.append("cursor_id=?")
+            params.append(int(body.cursor_id))
+        
+        if updates:
+            query = "UPDATE sim_state SET " + ", ".join(updates) + " WHERE id=1"
+            conn.execute(query, tuple(params))
+    return {"ok": True, "message": "Simulation settings updated"}
+
+
+@APP.post("/sim/test_alert")
+async def trigger_test_alert(user=Depends(require_role("sentinel"))):
+    with db() as conn:
+        ts = now_iso()
+        ticker = "SIM"
+        exp = (datetime.now(timezone.utc) + timedelta(days=30)).strftime("%Y-%m-%d")
+        strike = 400.0
+        opt_type = "C"
+        
+        ck = _make_contract_key(ticker, exp, strike, opt_type)
+        
+        conn.execute(
+            """
+            INSERT INTO alerts_live 
+            (ts, ticker, exp, strike, opt_type, premium, size, volume, oi, bid, ask, spread_pct, spot, otm_pct, dte, score_total, tags, source, contract_key)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (ts, ticker, exp, strike, opt_type, 1500000.0, 500, 1000, 200, 2.9, 3.1, 0.06, 395.0, 0.012, 30, 99.9, "SIM_TEST", "synthetic", ck)
+        )
+        
+        row_id_res = conn.execute("SELECT last_insert_rowid() as id").fetchone()
+        row_id = row_id_res["id"]
+        
+        new_row = conn.execute("SELECT * FROM alerts_live WHERE id=?", (row_id,)).fetchone()
+        item = _format_alerts([new_row], conn)[0]
+        
+    return {"ok": True, "message": "Test alert inserted", "alert": item}
 
 
 @APP.post("/admin/purge-mock")

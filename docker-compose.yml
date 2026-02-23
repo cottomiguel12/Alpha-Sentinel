@@ -12,6 +12,7 @@ services:
       DB_PATH: /data/sentinel.db
       LOG_PATH: /logs/sentinel.log
       API_PORT: "8001"
+      ALERTS_SOURCE: "live"
       UW_ENABLED: "0"
       UW_BASE_URL: "https://api.unusualwhales.com"
     volumes:
@@ -47,6 +48,20 @@ services:
       - ./AlphaSentinel-data:/data
       - ./config:/app/config:ro
       - sentinel_logs:/logs
+    networks: [ core_net ]
+
+  sentinel-sim:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    working_dir: /app
+    env_file: [ .env ]
+    environment:
+      DB_PATH: /data/sentinel.db
+    volumes:
+      - ./AlphaSentinel-data:/data
+      - sentinel_logs:/logs
+    command: [ "python", "-m", "app.sim" ]
     networks: [ core_net ]
     restart: unless-stopped
     depends_on: [ sentinel-api ]

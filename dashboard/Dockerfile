@@ -5,4 +5,4 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy static frontend files to Nginx serve directory
 COPY *.html /usr/share/nginx/html/
-COPY app.js /usr/share/nginx/html/
+COPY *.js /usr/share/nginx/html/

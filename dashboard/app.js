@@ -395,6 +395,60 @@ function initFilterDrawer() {
     });
 }
 
+// ── Market Tide (MAX) ─────────────────────────────────────────────────────────
+async function loadMarketTide(isBackground = false) {
+    if (!location.pathname.includes('market_tide.html')) return;
+
+    const disabledEl = document.getElementById('tide-disabled');
+    const activeEl = document.getElementById('tide-active');
+    if (!disabledEl || !activeEl) return;
+
+    if (!isBackground) {
+        document.getElementById('regime-label').textContent = 'Loading...';
+    }
+
+    const integrations = await fetchApi('/integrations');
+    const isReady = integrations && integrations.market_tide !== 'DISABLED';
+
+    if (!isReady) {
+        activeEl.classList.add('hidden');
+        disabledEl.classList.remove('hidden');
+        return;
+    }
+
+    activeEl.classList.remove('hidden');
+    disabledEl.classList.add('hidden');
+
+    const state = await fetchApi('/market-tide/current');
+    if (state && state.regime) {
+        document.getElementById('regime-label').textContent = state.regime.regime || '—';
+        document.getElementById('regime-conf').textContent = state.regime.confidence != null ? state.regime.confidence.toFixed(1) : '—';
+        document.getElementById('regime-index').textContent = state.regime.tide_index != null ? state.regime.tide_index.toFixed(1) : '—';
+        document.getElementById('regime-bias').textContent = state.regime.bias_1m != null ? formatCurrency(state.regime.bias_1m) : '—';
+        document.getElementById('stat-slope').textContent = state.regime.slope_1m != null ? state.regime.slope_1m.toFixed(1) : '—';
+        document.getElementById('stat-accel').textContent = state.regime.accel_1m != null ? state.regime.accel_1m.toFixed(1) : '—';
+        document.getElementById('regime-time').textContent = formatDate(state.regime.ts);
+
+        let rc = 'chip-neutral';
+        if (state.regime.regime === 'Bull Market') rc = 'chip-green';
+        if (state.regime.regime === 'Bear Market') rc = 'chip-red';
+        if (state.regime.regime === 'Chop / Unconfirmed') rc = 'chip-yellow';
+
+        const rLabel = document.getElementById('regime-label');
+        rLabel.className = `sc-val chip ${rc} text-[11px] font-bold px-2 py-0.5 ml-1 inline-flex`;
+
+        const container = document.getElementById('tide-series-container');
+        if (container) {
+            container.innerHTML = `
+                <div class="flex flex-col items-center">
+                    <span class="material-symbols-outlined text-4xl text-primary mb-2">monitoring</span>
+                    <span>Provider Active: ${integrations.market_tide}</span>
+                </div>
+            `;
+        }
+    }
+}
+
 // ── DOMContentLoaded ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     // Auth gate
@@ -509,6 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAlerts(false);
     loadMonitors(false);
     loadTopRecent(false);
+    loadMarketTide(false);
 
     // Auto-refresh every 5s
     setInterval(() => {
@@ -516,6 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadAlerts(true);
         loadMonitors(true);
         loadTopRecent(true);
+        loadMarketTide(true);
     }, 5000);
 });
 
