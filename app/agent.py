@@ -36,6 +36,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 from pathlib import Path
 from app.db import db, init_db
+from app.filters import filter_tick, FILTERS
 
 def _load_yaml_agent_config() -> dict:
     """
@@ -786,18 +787,51 @@ class SentinelAgent:
                 ),
             )
 
+    def _write_filter_stats(self, stats: dict) -> None:
+        """Persist per-tick filter counters to /data/filter_stats.json for the API."""
+        import json as _json
+        path = os.environ.get("FILTER_STATS_PATH", "/data/filter_stats.json")
+        try:
+            tmp = path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                _json.dump(stats, f)
+            os.replace(tmp, path)
+        except Exception as e:
+            self._log(f"filter_stats write failed: {e}")
+
     def tick(self) -> None:
         # Fetch new alerts from the active provider (CSV / Mock / UnusualWhales)
         try:
-            alerts = self.provider.fetch()
+            raw = self.provider.fetch()
         except Exception as exc:
             self._log(f"provider.fetch() error ({exc}), skipping tick alerts")
-            alerts = []
+            raw = []
 
-        inserted = self._insert_alerts(alerts)
+        # ── Smart filter pipeline (Stage 0 → 1 → 2 → Top-N) ────────────────
+        candidates, fstats = filter_tick(raw)
+        max_n = FILTERS["MAX_INSERT_PER_TICK"]
+        to_insert = candidates[:max_n]
+        fstats["inserted"] = len(to_insert)
+        efficiency = (
+            round(len(to_insert) / fstats["parsed"] * 100, 1)
+            if fstats["parsed"] > 0 else 0.0
+        )
+        fstats["efficiency_pct"] = efficiency
+
+        self._log(
+            f"[SIM_FILTER] parsed={fstats['parsed']} "
+            f"stage0_drop={fstats['dropped_stage0']} "
+            f"stage1_drop={fstats['dropped_stage1']} "
+            f"stage2_drop={fstats['dropped_stage2']} "
+            f"inserted={fstats['inserted']}"
+        )
+        self._write_filter_stats(fstats)
+        # ─────────────────────────────────────────────────────────────────────
+
+        inserted = self._insert_alerts(to_insert)
         mon_updates = self._upsert_monitor_for_watchlist()
 
-        last_alert_ts = alerts[-1].ts if alerts else None
+        last_alert_ts = to_insert[-1].ts if to_insert else None
 
         # Write health snapshot every tick
         self._write_health(
@@ -810,8 +844,8 @@ class SentinelAgent:
         )
 
         # Verbose log only when we actually inserted
-        if inserted and alerts:
-            a0 = alerts[0]
+        if inserted and to_insert:
+            a0 = to_insert[0]
             self._log(
                 f"inserted={inserted} monitor_updated={mon_updates} "
                 f"sample={a0.ticker} {a0.opt_type} {a0.strike} score={a0.score_total}"
@@ -819,8 +853,8 @@ class SentinelAgent:
 
         # Heartbeat log (ALWAYS prints, even at EOF)
         self._log(
-            f"tick: parsed={len(alerts)} inserted={inserted} "
-            f"monitor_updated={mon_updates} offset={self.state.get('csv_offset')}"
+            f"tick: parsed={fstats['parsed']} filtered_to={len(to_insert)} inserted={inserted} "
+            f"monitor_updated={mon_updates} efficiency={efficiency}%"
         )
 
     def run_forever(self) -> None:

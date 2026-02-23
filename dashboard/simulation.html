@@ -564,6 +564,62 @@
                     <p class="text-xs text-muted">Injects a mock score 99 row to verify dashboard connectivity.</p>
                 </div>
             </div>
+
+            <!-- Filter Stats Panel -->
+            <div class="card-panel md:col-span-2" id="filter-stats-panel">
+                <div class="flex items-center justify-between mb-4 border-b border-border pb-2">
+                    <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[16px] text-primary">filter_alt</span>
+                        Smart Filter Pipeline · Last Tick
+                    </h3>
+                    <span id="filter-available-badge"
+                        class="text-[10px] font-bold px-2 py-0.5 rounded border border-slate-700 text-slate-500">WAITING
+                        FOR DATA</span>
+                </div>
+
+                <!-- Stats grid -->
+                <div class="grid grid-cols-3 md:grid-cols-6 gap-3 mb-4">
+                    <div class="card-panel m-0 p-3 flex flex-col items-center">
+                        <span class="stat-label text-[10px]">Parsed</span>
+                        <span class="stat-value text-base mt-1" id="fs-parsed">—</span>
+                    </div>
+                    <div class="card-panel m-0 p-3 flex flex-col items-center">
+                        <span class="stat-label text-[10px]">S0 Drop</span>
+                        <span class="stat-value text-base mt-1 text-rose-400" id="fs-s0">—</span>
+                    </div>
+                    <div class="card-panel m-0 p-3 flex flex-col items-center">
+                        <span class="stat-label text-[10px]">S1 Drop</span>
+                        <span class="stat-value text-base mt-1 text-orange-400" id="fs-s1">—</span>
+                    </div>
+                    <div class="card-panel m-0 p-3 flex flex-col items-center">
+                        <span class="stat-label text-[10px]">S2 Drop</span>
+                        <span class="stat-value text-base mt-1 text-yellow-400" id="fs-s2">—</span>
+                    </div>
+                    <div class="card-panel m-0 p-3 flex flex-col items-center">
+                        <span class="stat-label text-[10px]">Inserted</span>
+                        <span class="stat-value text-base mt-1 text-emerald-400" id="fs-inserted">—</span>
+                    </div>
+                    <div class="card-panel m-0 p-3 flex flex-col items-center">
+                        <span class="stat-label text-[10px]">Efficiency</span>
+                        <span class="stat-value text-base mt-1" id="fs-efficiency">—</span>
+                    </div>
+                </div>
+
+                <!-- Efficiency bar -->
+                <div style="background:var(--surface2);border-radius:6px;height:6px;overflow:hidden">
+                    <div id="fs-bar"
+                        style="height:100%;width:0%;background:var(--primary);transition:width .5s ease;border-radius:6px">
+                    </div>
+                </div>
+                <div class="flex justify-between mt-1">
+                    <span class="text-[10px] text-slate-600">0% (none pass)</span>
+                    <span class="text-[10px] text-slate-600" id="fs-bar-label">Filter efficiency</span>
+                    <span class="text-[10px] text-slate-600">100%</span>
+                </div>
+
+                <p class="text-[11px] text-slate-600 mt-3">Stage 0: schema · Stage 1: liquidity · Stage 2: signal
+                    quality. Only high-conviction rows reach the DB.</p>
+            </div>
         </div>
 
     </div>
@@ -730,10 +786,51 @@
             document.getElementById('ui-sim-source').textContent = "Refer to docker-compose ALERTS_SOURCE";
         }
 
+        async function fetchFilterStats() {
+            const data = await fetchApi('/sim/filter_stats');
+            if (!data) return;
+
+            const badge = document.getElementById('filter-available-badge');
+            if (!data.available) {
+                badge.textContent = 'WAITING FOR DATA';
+                badge.style.color = '';
+                return;
+            }
+
+            badge.textContent = 'LIVE';
+            badge.style.color = '#10b981';
+            badge.style.borderColor = 'rgba(16,185,129,.3)';
+
+            document.getElementById('fs-parsed').textContent = data.parsed ?? '—';
+            document.getElementById('fs-s0').textContent = data.dropped_stage0 ?? '—';
+            document.getElementById('fs-s1').textContent = data.dropped_stage1 ?? '—';
+            document.getElementById('fs-s2').textContent = data.dropped_stage2 ?? '—';
+            document.getElementById('fs-inserted').textContent = data.inserted ?? '—';
+
+            const eff = data.efficiency_pct ?? 0;
+            document.getElementById('fs-efficiency').textContent = eff.toFixed(1) + '%';
+            document.getElementById('fs-bar').style.width = Math.min(eff, 100) + '%';
+            document.getElementById('fs-bar-label').textContent = `${eff.toFixed(1)}% pass rate`;
+
+            // Color efficiency: green if low (tight filter = good), yellow if medium, white if all pass
+            const effEl = document.getElementById('fs-efficiency');
+            if (eff <= 25) effEl.style.color = '#10b981';
+            else if (eff <= 60) effEl.style.color = '#eab308';
+            else effEl.style.color = '#f87171';
+
+            // Efficiency bar color
+            const bar = document.getElementById('fs-bar');
+            if (eff <= 25) bar.style.background = '#10b981';
+            else if (eff <= 60) bar.style.background = '#eab308';
+            else bar.style.background = '#f87171';
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             fetchSimState();
             fetchSourceEnv();
-            setInterval(fetchSimState, 2000); // 2s polling
+            fetchFilterStats();
+            setInterval(fetchSimState, 2000);    // 2s polling
+            setInterval(fetchFilterStats, 3000); // 3s polling
         });
     </script>
 </body>

@@ -558,6 +558,32 @@ async def reset_sim(user=Depends(require_role("sentinel"))):
     return {"ok": True, "message": "Simulation data cleared and cursor reset"}
 
 
+@APP.get("/sim/filter_stats")
+async def get_filter_stats(user=Depends(require_user)):
+    """Return the last per-tick filter counters written by the agent."""
+    import json as _json
+    path = os.environ.get("FILTER_STATS_PATH", "/data/filter_stats.json")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = _json.load(f)
+        data["available"] = True
+        return data
+    except FileNotFoundError:
+        return {
+            "available": False,
+            "parsed": 0,
+            "dropped_stage0": 0,
+            "dropped_stage1": 0,
+            "dropped_stage2": 0,
+            "pre_insert": 0,
+            "inserted": 0,
+            "efficiency_pct": 0.0,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @APP.post("/sim/settings")
 async def update_sim_settings(body: SimSettingsIn, user=Depends(require_role("sentinel"))):
     with db() as conn:
