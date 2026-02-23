@@ -272,13 +272,72 @@ async def alerts(
     sort_score: Optional[str] = None,
     user=Depends(require_user)
 ):
+    uw_enabled = int(os.environ.get("UW_ENABLED", "0")) == 1
+    if not uw_enabled:
+        return {"ok": True, "items": [], "meta": {"uw_enabled": False}}
+
     source_env = os.environ.get("ALERTS_SOURCE", "archive").strip().lower()
     table_name = "alerts_live" if source_env == "live" else "alerts"
 
     limit = max(1, min(int(limit), 500))
 
     query = f"SELECT * FROM {table_name}"
-    conditions = []
+    conditions = ["source = 'UW'"]
+    params = []
+
+    if symbol:
+        conditions.append("ticker = ?")
+        params.append(symbol.strip().upper())
+    if type:
+        ot = type.strip().upper()
+        ot = "C" if ot.startswith("C") else "P" if ot.startswith("P") else ot
+        conditions.append("opt_type = ?")
+        params.append(ot)
+    if min_premium is not None:
+        conditions.append("premium >= ?")
+        params.append(min_premium)
+    if dte_min is not None:
+        conditions.append("dte >= ?")
+        params.append(dte_min)
+    if dte_max is not None:
+        conditions.append("dte <= ?")
+        params.append(dte_max)
+
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+
+    if sort_score and sort_score.lower() == "desc":
+        query += " ORDER BY score_total DESC LIMIT ?"
+    elif sort_score and sort_score.lower() == "asc":
+        query += " ORDER BY score_total ASC LIMIT ?"
+    else:
+        query += " ORDER BY id DESC LIMIT ?"
+    params.append(limit)
+
+    with db() as conn:
+        rows = conn.execute(query, tuple(params)).fetchall()
+        items = _format_alerts(rows, conn)
+
+    return {"ok": True, "items": items, "meta": {"uw_enabled": True}}
+
+@APP.get("/sim/alerts")
+async def sim_alerts(
+    limit: int = 50,
+    symbol: Optional[str] = None,
+    type: Optional[str] = None,
+    min_premium: Optional[float] = None,
+    dte_min: Optional[int] = None,
+    dte_max: Optional[int] = None,
+    sort_score: Optional[str] = None,
+    user=Depends(require_user)
+):
+    source_env = os.environ.get("ALERTS_SOURCE", "archive").strip().lower()
+    table_name = "alerts_live" if source_env == "live" else "alerts"
+
+    limit = max(1, min(int(limit), 500))
+
+    query = f"SELECT * FROM {table_name}"
+    conditions = ["(source IN ('SIM', 'CSV') OR source IS NULL)"]
     params = []
 
     if symbol:
@@ -330,7 +389,7 @@ async def alerts_recent(window_sec: int = 900, limit: int = 15, user=Depends(req
             f"""
             SELECT *
             FROM {table_name}
-            WHERE ts >= ?
+            WHERE ts >= ? AND source = 'UW'
             ORDER BY score_total DESC
             LIMIT ?
             """,

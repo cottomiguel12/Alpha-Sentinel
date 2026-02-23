@@ -62,7 +62,10 @@ def init_db():
           dte INTEGER,
           score_total REAL NOT NULL,
           tags TEXT,
-          reason_codes TEXT
+          reason_codes TEXT,
+          ingested_at TEXT,
+          trade_time_raw TEXT,
+          trade_tz TEXT
         )
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_alerts_ts ON alerts(ts)")
@@ -91,7 +94,10 @@ def init_db():
           tags TEXT,
           reason_codes TEXT,
           source TEXT,
-          contract_key TEXT
+          contract_key TEXT,
+          ingested_at TEXT,
+          trade_time_raw TEXT,
+          trade_tz TEXT
         )
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_alerts_live_ts ON alerts_live(ts)")
@@ -191,12 +197,11 @@ def init_db():
         CREATE TABLE IF NOT EXISTS market_tide_ticks (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           ts TEXT NOT NULL,
-          interval_type TEXT NOT NULL,
-          filter_type TEXT NOT NULL,
-          premium_bias REAL NOT NULL,
-          slope REAL NOT NULL,
-          acceleration REAL NOT NULL,
-          raw_json TEXT
+          interval TEXT NOT NULL,
+          net_call_premium REAL,
+          net_put_premium REAL,
+          net_volume REAL,
+          meta_json TEXT
         )
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_market_tide_ticks_ts ON market_tide_ticks(ts)")
@@ -224,14 +229,18 @@ def init_db():
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_market_regime_snapshots_ts ON market_regime_snapshots(ts)")
 
-        # --- Non-destructive column migrations ---
+        # Add source column if it doesn't exist yet (safe for existing DBs)
+        for table in ["alerts", "alerts_live"]:
+            existing_cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+            if "source" not in existing_cols:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN source TEXT")
 
-        # Add alerts.source column if it doesn't exist yet (safe for existing DBs)
-        existing_alert_cols = {r["name"] for r in conn.execute("PRAGMA table_info(alerts)").fetchall()}
-        if "source" not in existing_alert_cols:
-            conn.execute("ALTER TABLE alerts ADD COLUMN source TEXT")
-
-        # Add alerts.contract_key column if it doesn't exist yet (legacy migration)
-        if "contract_key" not in existing_alert_cols:
-            conn.execute("ALTER TABLE alerts ADD COLUMN contract_key TEXT")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_alerts_contract_key ON alerts(contract_key)")
+        # Add non-destructive column migrations for timestamps
+        for table in ["alerts", "alerts_live"]:
+            existing_cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+            if "ingested_at" not in existing_cols:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN ingested_at TEXT")
+            if "trade_time_raw" not in existing_cols:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN trade_time_raw TEXT")
+            if "trade_tz" not in existing_cols:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN trade_tz TEXT")
