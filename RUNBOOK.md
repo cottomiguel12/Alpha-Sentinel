@@ -40,3 +40,26 @@ Navigate to your VPS IP over HTTP on port 3000.
 *   **Dashboard shows Loading forever:** Ensure port 8001 is mapped successfully from `sentinel-api`. Also ensure that the `fetchApi` path matches `/api/`. Nginx routes `/api/` directly to `http://sentinel-api:8001/`.
 *   **Missing Data in API request:** Re-verify that the CSV parsing logic successfully runs by observing `logs-agent`.
 *   **Stale Dashboard:** Clear your browser cache or try Hard Refresh (`Cmd+Shift+R`) to force redownloading frontend assets.
+
+## Smoke Tests
+
+### Verify `score_history` in `/monitors` response
+After deploying, run the following from your machine (replace `<token>` with a valid JWT):
+
+```bash
+curl -s -H "Authorization: Bearer <token>" http://69.62.67.133:3000/api/monitors \
+  | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+items = data.get('items', [])
+for item in items:
+    hist = item.get('score_history', 'MISSING')
+    assert isinstance(hist, list), f'score_history is not a list for {item[\"contract_key\"]}'
+    assert all(isinstance(v, (int, float)) for v in hist), f'non-numeric value in score_history'
+    print(f'OK  {item[\"contract_key\"]}  history={hist[-5:]}')
+print(f'All {len(items)} monitors OK')
+"
+```
+
+Expected output: one `OK` line per monitored contract with its last 5 score values.
+

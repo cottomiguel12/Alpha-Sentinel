@@ -4,6 +4,7 @@ import base64
 import hashlib
 import hmac
 import json
+import math
 import os
 import secrets
 import time
@@ -364,11 +365,22 @@ async def monitor(user=Depends(require_user)):
     out = []
     for r in rows:
         d = dict(r)
-        # normalize history + derived fields
+
+        # --- score_history: deserialize JSON, coerce to [float], guard against corruption ---
+        raw_hist = d.get("score_history") or "[]"
         try:
-            d["score_history"] = json.loads(d.get("score_history") or "[]")
-        except Exception:
+            parsed = json.loads(raw_hist)
+            if not isinstance(parsed, list):
+                raise ValueError("score_history is not a list")
+            d["score_history"] = [
+                round(float(v), 2) for v in parsed
+                if v is not None and math.isfinite(float(v))
+            ]
+        except Exception as exc:
+            print(f"[WARN] /monitors score_history parse error for {d.get('contract_key')}: {exc}")
             d["score_history"] = []
+
+        # --- delta_from_peak ---
         try:
             d["delta_from_peak"] = round(float(d.get("peak_score", 0)) - float(d.get("current_score", 0)), 1)
         except Exception:
