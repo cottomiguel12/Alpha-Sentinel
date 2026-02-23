@@ -878,6 +878,217 @@
             letter-spacing: 0.08em;
             padding: 12px 16px 6px;
         }
+
+        /* ── Contract Detail Popup ─────────────────────────────────── */
+        .detail-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: rgba(0, 0, 0, .6);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        @media (min-width: 431px) {
+            .detail-backdrop {
+                align-items: center;
+            }
+        }
+
+        .detail-backdrop.open {
+            display: flex;
+        }
+
+        .detail-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px 16px 0 0;
+            width: 100%;
+            max-width: 520px;
+            max-height: 90dvh;
+            overflow-y: auto;
+            animation: slideUp .22s cubic-bezier(.22, 1, .36, 1);
+        }
+
+        @media (min-width: 431px) {
+            .detail-panel {
+                border-radius: 16px;
+                max-height: 80dvh;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(28px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 18px 12px;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            background: var(--surface);
+            z-index: 1;
+            border-radius: 16px 16px 0 0;
+        }
+
+        .detail-contract-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .detail-ticker {
+            font-size: 20px;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.02em;
+        }
+
+        .detail-close {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--muted);
+            flex-shrink: 0;
+            transition: color .15s;
+        }
+
+        .detail-close:hover {
+            color: #fff;
+        }
+
+        .detail-close .material-symbols-outlined {
+            font-size: 18px;
+        }
+
+        .detail-body {
+            padding: 16px 18px 20px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        @media (min-width: 380px) {
+            .detail-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .detail-stat {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 9px 11px;
+        }
+
+        .detail-stat .ds-label {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .detail-stat .ds-val {
+            font-size: 14px;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+
+        .detail-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 16px;
+        }
+
+        .detail-cta {
+            width: 100%;
+            padding: 13px;
+            border-radius: 10px;
+            border: none;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: opacity .15s, transform .1s;
+            letter-spacing: 0.01em;
+        }
+
+        .detail-cta:active {
+            transform: scale(.98);
+        }
+
+        .detail-cta.cta-add {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .detail-cta.cta-add:hover {
+            opacity: .88;
+        }
+
+        .detail-cta.cta-remove {
+            background: rgba(248, 113, 113, .1);
+            border: 1px solid rgba(248, 113, 113, .3);
+            color: #f87171;
+        }
+
+        .detail-cta.cta-remove:hover {
+            background: rgba(248, 113, 113, .18);
+        }
+
+        .detail-cta .material-symbols-outlined {
+            font-size: 18px;
+        }
+
+        .detail-cta:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+
+        /* clickable rows / cards */
+        .tbl-row.has-detail {
+            cursor: pointer;
+        }
+
+        .alert-card.has-detail {
+            cursor: pointer;
+        }
+
+        .recent-alert-item.has-detail {
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -1029,6 +1240,23 @@
         </div><!-- /.main-layout -->
     </div><!-- /.page-content -->
 
+    <!-- ── Contract Detail Popup ──────────────────────────────────── -->
+    <div class="detail-backdrop" id="detail-backdrop" role="dialog" aria-modal="true" aria-label="Contract detail">
+        <div class="detail-panel" id="detail-panel">
+            <div class="detail-header">
+                <div class="detail-contract-title" id="detail-title"><!-- filled by JS --></div>
+                <button class="detail-close" id="detail-close" aria-label="Close">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="detail-body">
+                <div class="detail-grid" id="detail-grid"><!-- filled by JS --></div>
+                <div class="detail-tags" id="detail-tags"><!-- filled by JS --></div>
+                <button class="detail-cta" id="detail-cta" onclick="detailCtaClick()"><!-- filled by JS --></button>
+            </div>
+        </div>
+    </div>
+
     <!-- ── Bottom nav (≤ 430px) ──────────────────────────────────── -->
     <nav class="bottom-nav" aria-label="Mobile navigation">
         <a href="/" class="active" aria-current="page">
@@ -1042,6 +1270,10 @@
         <a href="/market_tide.html">
             <span class="material-symbols-outlined">waves</span>
             Tide
+        </a>
+        <a href="/simulation.html">
+            <span class="material-symbols-outlined">play_circle</span>
+            Sim
         </a>
     </nav>
 

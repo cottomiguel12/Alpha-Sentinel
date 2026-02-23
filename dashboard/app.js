@@ -69,6 +69,94 @@ async function toggleAOI(contractKey, currentActive) {
     else loadAlerts(true);
 }
 
+// ── Contract Detail Popup ─────────────────────────────────────────────────────
+let _detailItem = null;
+
+function ds(label, val) {
+    return `<div class="detail-stat"><span class="ds-label">${label}</span><span class="ds-val">${val}</span></div>`;
+}
+
+function openDetailPopup(item) {
+    _detailItem = item;
+    const typeColor = item.opt_type === 'C' ? '#34d399' : '#f87171';
+    const typeLabel = item.opt_type === 'C' ? 'CALL' : 'PUT';
+
+    // Header
+    document.getElementById('detail-title').innerHTML = `
+        <span class="detail-ticker">${item.ticker}</span>
+        <span class="chip" style="background:${item.opt_type === 'C' ? 'rgba(52,211,153,.12)' : 'rgba(248,113,113,.12)'};
+              border-color:${item.opt_type === 'C' ? 'rgba(52,211,153,.3)' : 'rgba(248,113,113,.3)'};
+              color:${typeColor}">${typeLabel}</span>
+        <span style="font-size:16px;font-weight:700;color:${typeColor}">$${item.strike}</span>
+        ${item.score_total != null ? `<span class="chip ${scoreColor(item.score_total)}">${item.score_total.toFixed(1)}</span>` : ''}
+    `;
+
+    // Stats grid
+    const volOI = item.volume && item.oi ? (item.volume / item.oi).toFixed(1) + 'x' : '—';
+    document.getElementById('detail-grid').innerHTML =
+        ds('Expiry', item.exp || '—') +
+        ds('DTE', item.dte != null ? item.dte + 'd' : '—') +
+        ds('Premium', formatCurrency(item.premium)) +
+        ds('Size', item.size || '—') +
+        ds('Volume', item.volume != null ? item.volume.toLocaleString() : '—') +
+        ds('Open Int', item.oi != null ? item.oi.toLocaleString() : '—') +
+        ds('Vol/OI', volOI) +
+        ds('Spot', formatCurrency(item.spot)) +
+        ds('OTM %', formatPercent(item.otm_pct)) +
+        ds('Bid', item.bid != null ? '$' + item.bid.toFixed(2) : '—') +
+        ds('Ask', item.ask != null ? '$' + item.ask.toFixed(2) : '—') +
+        ds('Spread %', formatPercent(item.spread_pct)) +
+        ds('Time', formatDate(item.ts));
+
+    // Tags
+    const tags = (item.tags || '').split(',').filter(Boolean);
+    document.getElementById('detail-tags').innerHTML = tags.length
+        ? tags.map(t => `<span class="chip chip-neutral">${t.trim()}</span>`).join('')
+        : '';
+
+    // CTA button
+    _refreshDetailCta(!!item.is_aoi);
+
+    // Show
+    document.getElementById('detail-backdrop').classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function _refreshDetailCta(isAoi) {
+    const btn = document.getElementById('detail-cta');
+    if (!btn) return;
+    btn.disabled = false;
+    btn.style.opacity = '';
+    if (isAoi) {
+        btn.className = 'detail-cta cta-remove';
+        btn.innerHTML = `<span class="material-symbols-outlined">remove_circle</span> Remove from Monitor`;
+    } else {
+        btn.className = 'detail-cta cta-add';
+        btn.innerHTML = `<span class="material-symbols-outlined">add_circle</span> Add to Monitor`;
+    }
+}
+
+async function detailCtaClick() {
+    if (!_detailItem) return;
+    const btn = document.getElementById('detail-cta');
+    const wasAoi = !!_detailItem.is_aoi;
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    await fetchApi('/watchlist/toggle', {
+        method: 'POST',
+        body: JSON.stringify({ contract_key: _detailItem.contract_key, is_active: wasAoi ? 0 : 1 })
+    });
+    _detailItem.is_aoi = wasAoi ? 0 : 1;
+    _refreshDetailCta(!wasAoi);
+    loadAlerts(true);
+}
+
+function closeDetailPopup() {
+    document.getElementById('detail-backdrop').classList.remove('open');
+    document.body.style.overflow = '';
+    _detailItem = null;
+}
+
 // ── Alert card (mobile) ───────────────────────────────────────────────────────
 function renderAlertCard(item) {
     const typeColor = item.opt_type === 'C' ? 'text-emerald-400' : 'text-rose-400';
@@ -78,16 +166,16 @@ function renderAlertCard(item) {
         .map(t => `<span class="chip chip-neutral">${t.trim()}</span>`).join('');
     const isAoi = !!item.is_aoi;
     const trackBtn = isAoi
-        ? `<button class="btn-track btn-track-active" data-ck="${item.contract_key}" onclick="toggleAOI('${item.contract_key}',1)" title="Remove from Watchlist">
+        ? `<button class="btn-track btn-track-active" data-ck="${item.contract_key}" onclick="event.stopPropagation();toggleAOI('${item.contract_key}',1)" title="Remove from Watchlist">
                <span class="material-symbols-outlined">star</span>
            </button>`
-        : `<button class="btn-track" data-ck="${item.contract_key}" onclick="toggleAOI('${item.contract_key}',0)" title="Add to Watchlist">
+        : `<button class="btn-track" data-ck="${item.contract_key}" onclick="event.stopPropagation();toggleAOI('${item.contract_key}',0)" title="Add to Watchlist">
                <span class="material-symbols-outlined">star</span>
            </button>`;
     const aoiChip = isAoi ? `<span class="chip chip-blue">AOI</span>` : '';
 
     const el = document.createElement('div');
-    el.className = 'alert-card';
+    el.className = 'alert-card has-detail';
     if (item.score_total >= 90) el.classList.add('alert-card-hot');
     el.innerHTML = `
         <div class="alert-card-header">
@@ -138,7 +226,9 @@ function renderAlertCard(item) {
             </div>
         </div>
         ${tags ? `<div class="alert-card-tags">${tags}</div>` : ''}
+        <div style="font-size:10px;color:var(--muted);text-align:right;margin-top:2px">Tap for details →</div>
     `;
+    el.addEventListener('click', () => openDetailPopup(item));
     return el;
 }
 
@@ -150,7 +240,7 @@ function renderAlertRow(item) {
         .map(t => `<span class="chip chip-neutral">${t.trim()}</span>`).join('');
     const aoiChip = isAoi ? `<span class="chip chip-blue ml-1">AOI</span>` : '';
     const tr = document.createElement('tr');
-    tr.className = 'tbl-row';
+    tr.className = 'tbl-row has-detail';
     if (item.score_total >= 90) tr.classList.add('bg-primary/5');
     tr.innerHTML = `
         <td class="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">${formatDate(item.ts)}</td>
@@ -167,11 +257,12 @@ function renderAlertRow(item) {
         <td class="px-4 py-3"><div class="flex gap-1 flex-wrap max-w-[140px]">${tags}</div></td>
         <td class="px-4 py-3 text-right">
             <button class="btn-track ${isAoi ? 'btn-track-active' : ''}" data-ck="${item.contract_key}"
-                onclick="toggleAOI('${item.contract_key}',${isAoi ? 1 : 0})" title="${isAoi ? 'Remove' : 'Watch'}">
+                onclick="event.stopPropagation();toggleAOI('${item.contract_key}',${isAoi ? 1 : 0})" title="${isAoi ? 'Remove' : 'Watch'}">
                 <span class="material-symbols-outlined">star</span>
             </button>
         </td>
     `;
+    tr.addEventListener('click', () => openDetailPopup(item));
     return tr;
 }
 
@@ -367,7 +458,8 @@ async function loadTopRecent(isBackground = false) {
     listEl.innerHTML = '';
     data.items.forEach(item => {
         const d = document.createElement('div');
-        d.className = 'recent-alert-item';
+        d.className = 'recent-alert-item has-detail';
+        d.title = 'Click to view details';
         d.innerHTML = `
             <div>
                 <div class="font-bold text-white text-sm">${item.ticker}
@@ -380,6 +472,7 @@ async function loadTopRecent(isBackground = false) {
                 <div class="text-[10px] text-slate-500">${formatDate(item.ts)}</div>
             </div>
         `;
+        d.addEventListener('click', () => openDetailPopup(item));
         listEl.appendChild(d);
     });
 }
@@ -515,6 +608,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Logout buttons
     document.querySelectorAll('.logout-btn').forEach(btn => btn.addEventListener('click', logout));
 
+    // Detail popup close
+    document.getElementById('detail-close')?.addEventListener('click', closeDetailPopup);
+    document.getElementById('detail-backdrop')?.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeDetailPopup();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeDetailPopup();
+    });
     // Filter drawer
     initFilterDrawer();
 
