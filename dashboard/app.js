@@ -16,19 +16,30 @@ function logout() {
 // ── Format helpers ────────────────────────────────────────────────────────────
 function formatCurrency(val) {
     if (val == null) return '—';
-    if (val >= 1_000_000) return '$' + (val / 1_000_000).toFixed(1) + 'M';
-    if (val >= 1_000) return '$' + (val / 1_000).toFixed(1) + 'K';
-    return '$' + val.toFixed(2);
+    return '$' + val.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
-function formatPercent(val) { return val == null ? '—' : val.toFixed(1) + '%'; }
+function formatPercent(val) {
+    if (val == null) return '—';
+    return val.toFixed(1) + '%';
+}
 function formatDate(isoStr) {
     if (!isoStr) return '—';
-    return new Date(isoStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const d = new Date(isoStr);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
-function scoreColor(s) {
-    if (s == null) return 'chip-neutral';
-    if (s >= 85) return 'chip-green';
-    if (s >= 60) return 'chip-yellow';
+function formatAge(isoStr) {
+    if (!isoStr) return '—';
+    const d = new Date(isoStr);
+    const diff = Math.floor((Date.now() - d.getTime()) / 60000);
+    if (diff < 1) return 'now';
+    if (diff < 60) return diff + 'm';
+    if (diff < 1440) return Math.floor(diff / 60) + 'h';
+    return Math.floor(diff / 1440) + 'd';
+}
+function scoreColor(score) {
+    if (score == null) return 'chip-neutral';
+    if (score >= 85) return 'chip-green';
+    if (score >= 60) return 'chip-yellow';
     return 'chip-neutral';
 }
 
@@ -55,6 +66,41 @@ async function updateHealth() {
 
 // ── Viewport helpers ──────────────────────────────────────────────────────────
 function isMobile() { return window.innerWidth <= 430; }
+
+// ── Sparkline Helper ──────────────────────────────────────────────────────────
+function generateSparklineSVG(history, w = 90, h = 24) {
+    if (!history || history.length < 2) return '';
+    const points = history.slice(-40);
+    const min = Math.min(...points);
+    const max = Math.max(...points);
+    const range = max - min;
+    const padding = 2;
+    const effH = h - (padding * 2);
+
+    let path = '';
+    points.forEach((val, i) => {
+        const x = (i / (points.length - 1)) * w;
+        let y = h / 2;
+        if (range > 0) y = padding + effH - (((val - min) / range) * effH);
+        path += `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)} `;
+    });
+
+    const first = points[0];
+    const last = points[points.length - 1];
+    let color = '#94a3b8';
+    let caret = '';
+    if (last > first) { color = '#34d399'; caret = '▲'; }
+    else if (last < first) { color = '#f87171'; caret = '▼'; }
+
+    return `
+        <div style="display:flex;align-items:center;gap:4px;" title="Current: ${last.toFixed(1)} | Initial: ${first.toFixed(1)}">
+            <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none" style="overflow:visible">
+                <path d="${path}" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span style="font-size:9px;color:${color}">${caret}</span>
+        </div>
+    `;
+}
 
 // ── AOI toggle ────────────────────────────────────────────────────────────────
 async function toggleAOI(contractKey, currentActive) {
@@ -195,7 +241,7 @@ function renderAlertCard(item) {
             <span class="dot">·</span>
             <span>${item.dte != null ? item.dte + 'd' : '—'}</span>
             <span class="dot">·</span>
-            <span class="text-slate-500">${formatDate(item.ts)}</span>
+            <span class="text-slate-500" title="Ingested: ${formatAge(item.ingested_at || item.ts)} ago">${formatDate(item.ts)}</span>
         </div>
         <div class="alert-card-row1">
             <div class="stat-cell">
@@ -243,7 +289,10 @@ function renderAlertRow(item) {
     tr.className = 'tbl-row has-detail';
     if (item.score_total >= 90) tr.classList.add('bg-primary/5');
     tr.innerHTML = `
-        <td class="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">${formatDate(item.ts)}</td>
+        <td class="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">
+            <div>${formatDate(item.ts)}</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">${formatAge(item.ingested_at || item.ts)}</div>
+        </td>
         <td class="px-4 py-3 text-sm font-bold text-white tracking-wide">${item.ticker}${aoiChip}</td>
         <td class="px-4 py-3 text-sm font-medium ${typeColor} whitespace-nowrap">$${item.strike}${item.opt_type} ${item.exp}</td>
         <td class="px-4 py-3 text-sm font-bold text-white text-right">${formatCurrency(item.premium)}</td>
@@ -358,8 +407,11 @@ function renderMonitorCard(item) {
                 <span class="stat-val ${deltaColor}">${item.delta_from_peak != null ? item.delta_from_peak : '—'}</span>
             </div>
         </div>
-        <div class="monitor-card-footer">
+        <div class="monitor-card-footer flex justify-between items-end mt-1">
             <span class="text-[11px] text-slate-500">Updated ${formatDate(item.last_update_ts)}</span>
+            <div class="sparkline-mini" style="height:22px;">
+                ${generateSparklineSVG(item.score_history, 70, 22)}
+            </div>
         </div>
     `;
     return el;
@@ -386,7 +438,7 @@ function renderMonitorRow(item) {
         <td class="px-5 py-4 text-sm font-bold text-white tabular-nums">${item.current_score != null ? item.current_score.toFixed(2) : '—'}</td>
         <td class="px-5 py-4 text-sm tabular-nums text-slate-400">${item.peak_score != null ? item.peak_score.toFixed(2) : '—'}</td>
         <td class="px-5 py-4 text-sm tabular-nums ${deltaColor}">${item.delta_from_peak != null ? item.delta_from_peak : '—'}</td>
-        <td class="px-5 py-4"><div class="sparkline-mini"></div></td>
+        <td class="px-5 py-4"><div class="sparkline-mini">${generateSparklineSVG(item.score_history, 90, 24)}</div></td>
         <td class="px-5 py-4"><span class="${statusClass}">${item.status || 'TRACKING'}</span></td>
         <td class="px-5 py-4 text-xs text-slate-400">${formatDate(item.last_update_ts)}</td>
         <td class="px-5 py-4 text-right">
@@ -646,15 +698,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Score sort (desktop th)
     const thScore = document.getElementById('th-score');
+    const mobileSortScore = document.getElementById('mobile-sort-score');
+
+    function refreshSortUI() {
+        // Desktop th sort UI
+        const icon = document.getElementById('sort-icon-score');
+        if (icon) {
+            const map = { '': 'swap_vert', 'desc': 'arrow_downward', 'asc': 'arrow_upward' };
+            icon.textContent = map[currentSortScore];
+            icon.className = `material-symbols-outlined text-[14px] ${currentSortScore ? 'text-primary opacity-100' : 'opacity-0 group-hover:opacity-50'}`;
+        }
+        // Mobile button sort UI
+        if (mobileSortScore) {
+            if (currentSortScore === 'desc') {
+                mobileSortScore.classList.add('active');
+                mobileSortScore.setAttribute('aria-pressed', 'true');
+            } else {
+                mobileSortScore.classList.remove('active');
+                mobileSortScore.setAttribute('aria-pressed', 'false');
+            }
+        }
+    }
+
     if (thScore) {
         thScore.addEventListener('click', () => {
             currentSortScore = currentSortScore === '' ? 'desc' : currentSortScore === 'desc' ? 'asc' : '';
-            const icon = document.getElementById('sort-icon-score');
-            if (icon) {
-                const map = { '': 'swap_vert', 'desc': 'arrow_downward', 'asc': 'arrow_upward' };
-                icon.textContent = map[currentSortScore];
-                icon.className = `material-symbols-outlined text-[14px] ${currentSortScore ? 'text-primary opacity-100' : 'opacity-0 group-hover:opacity-50'}`;
-            }
+            refreshSortUI();
+            loadAlerts(false);
+        });
+    }
+
+    if (mobileSortScore) {
+        mobileSortScore.addEventListener('click', () => {
+            // Mobile toggle: Default -> Score DESC -> Default
+            currentSortScore = currentSortScore === 'desc' ? '' : 'desc';
+            refreshSortUI();
             loadAlerts(false);
         });
     }
