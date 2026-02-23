@@ -93,8 +93,8 @@ function generateSparklineSVG(history, w = 90, h = 24) {
     else if (last < first) { color = '#f87171'; caret = '▼'; }
 
     return `
-        <div style="display:flex;align-items:center;gap:4px;" title="Current: ${last.toFixed(1)} | Initial: ${first.toFixed(1)}">
-            <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none" style="overflow:visible">
+        <div style="display:flex;align-items:center;gap:4px;width:100%" title="Current: ${last.toFixed(1)} | Initial: ${first.toFixed(1)}">
+            <svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" fill="none" style="overflow:visible;flex:1">
                 <path d="${path}" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             <span style="font-size:9px;color:${color}">${caret}</span>
@@ -365,6 +365,52 @@ async function loadAlerts(isBackground = false) {
     }
 }
 
+// ── Monitor Detail Popup ──────────────────────────────────────────────────────
+function openMonitorDetailPopup(item) {
+    const typeColor = item.opt_type === 'C' ? '#34d399' : '#f87171';
+    const typeLabel = item.opt_type === 'C' ? 'CALL' : 'PUT';
+
+    document.getElementById('detail-title').innerHTML = `
+        <span class="detail-ticker">${item.ticker}</span>
+        <span class="chip" style="background:${item.opt_type === 'C' ? 'rgba(52,211,153,.12)' : 'rgba(248,113,113,.12)'};
+              border-color:${item.opt_type === 'C' ? 'rgba(52,211,153,.3)' : 'rgba(248,113,113,.3)'};
+              color:${typeColor}">${typeLabel}</span>
+        <span style="font-size:16px;font-weight:700;color:${typeColor}">$${item.strike}</span>
+    `;
+
+    document.getElementById('detail-grid').innerHTML =
+        ds('Entry Score', item.entry_score != null ? item.entry_score.toFixed(1) : '—') +
+        ds('Peak Score', item.peak_score != null ? item.peak_score.toFixed(1) : '—') +
+        ds('Current Score', item.current_score != null ? item.current_score.toFixed(1) : '—');
+
+    const trendWrap = document.getElementById('detail-sparkline-wrap');
+    const trendCont = document.getElementById('detail-sparkline-cont');
+
+    if (item.score_history && item.score_history.length > 0) {
+        trendWrap.style.display = 'block';
+
+        let histHtml = '<div style="margin-top:16px;font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:0.06em">Last 10 Ticks</div><div style="margin-top:8px;display:flex;flex-direction:column;gap:4px;">';
+        const recent = [...item.score_history].slice(-10).reverse();
+        recent.forEach((v, idx) => {
+            histHtml += `<div style="display:flex;justify-content:space-between;padding:6px 12px;background:var(--surface2);border-radius:6px;font-size:12px;color:#fff;">
+                <span style="color:var(--muted)">t-${idx}</span>
+                <span>${v.toFixed(1)}</span>
+            </div>`;
+        });
+        histHtml += '</div>';
+
+        trendCont.innerHTML = generateSparklineSVG(item.score_history, 450, 80) + histHtml;
+        trendCont.style.flexDirection = 'column';
+        trendCont.style.alignItems = 'stretch';
+    } else {
+        trendWrap.style.display = 'none';
+        trendCont.innerHTML = '';
+    }
+
+    document.getElementById('detail-backdrop').classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
 // ── Monitor card (mobile) ─────────────────────────────────────────────────────
 function renderMonitorCard(item) {
     const statusClass = (item.status === 'ACTIVE' || item.status === 'Monitor')
@@ -372,7 +418,10 @@ function renderMonitorCard(item) {
     const deltaColor = item.delta_from_peak < 0 ? 'text-rose-400' : 'text-emerald-400';
 
     const el = document.createElement('div');
-    el.className = 'monitor-card';
+    el.className = 'monitor-card has-detail';
+    el.onclick = (e) => {
+        if (!e.target.closest('button')) openMonitorDetailPopup(item);
+    };
     el.innerHTML = `
         <div class="monitor-card-header">
             <div class="flex items-center gap-2">
@@ -423,7 +472,10 @@ function renderMonitorRow(item) {
         ? 'chip chip-blue' : 'chip chip-yellow';
     const deltaColor = item.delta_from_peak < 0 ? 'text-rose-400' : 'text-emerald-400';
     const tr = document.createElement('tr');
-    tr.className = 'tbl-row border-b border-slate-800/50';
+    tr.className = 'tbl-row border-b border-slate-800/50 has-detail';
+    tr.onclick = (e) => {
+        if (!e.target.closest('button')) openMonitorDetailPopup(item);
+    };
     tr.innerHTML = `
         <td class="px-5 py-4">
             <div class="flex items-center gap-2">

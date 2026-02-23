@@ -550,6 +550,153 @@
             color: var(--muted);
         }
 
+        .monitor-card.has-detail {
+            cursor: pointer;
+        }
+
+        /* ── Contract Detail Popup ─────────────────────────────────── */
+        .detail-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: rgba(0, 0, 0, .6);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        @media (min-width: 431px) {
+            .detail-backdrop {
+                align-items: center;
+            }
+        }
+
+        .detail-backdrop.open {
+            display: flex;
+        }
+
+        .detail-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px 16px 0 0;
+            width: 100%;
+            max-width: 520px;
+            max-height: 90dvh;
+            overflow-y: auto;
+            animation: slideUp .22s cubic-bezier(.22, 1, .36, 1);
+        }
+
+        @media (min-width: 431px) {
+            .detail-panel {
+                border-radius: 16px;
+                max-height: 80dvh;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(28px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 18px 12px;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            background: var(--surface);
+            z-index: 1;
+            border-radius: 16px 16px 0 0;
+        }
+
+        .detail-contract-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .detail-ticker {
+            font-size: 20px;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.02em;
+        }
+
+        .detail-close {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--muted);
+            flex-shrink: 0;
+            transition: color .15s;
+        }
+
+        .detail-close:hover {
+            color: #fff;
+        }
+
+        .detail-close .material-symbols-outlined {
+            font-size: 18px;
+        }
+
+        .detail-body {
+            padding: 16px 18px 20px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        @media (min-width: 380px) {
+            .detail-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .detail-stat {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 9px 11px;
+        }
+
+        .detail-stat .ds-label {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .detail-stat .ds-val {
+            font-size: 14px;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+
         ::-webkit-scrollbar {
             width: 5px;
             height: 5px;
@@ -684,6 +831,28 @@
         </a>
     </nav>
 
+    <!-- ── Contract Detail Popup ──────────────────────────────────── -->
+    <div class="detail-backdrop" id="detail-backdrop" role="dialog" aria-modal="true" aria-label="Contract detail">
+        <div class="detail-panel" id="detail-panel">
+            <div class="detail-header">
+                <div class="detail-contract-title" id="detail-title"><!-- filled by JS --></div>
+                <button class="detail-close" id="detail-close" aria-label="Close">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="detail-body">
+                <div class="detail-grid" id="detail-grid"><!-- filled by JS --></div>
+                <div style="margin-top:10px;margin-bottom:16px" id="detail-sparkline-wrap">
+                    <div
+                        style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:8px;letter-spacing:0.06em;">
+                        Score Trend</div>
+                    <div id="detail-sparkline-cont"
+                        style="padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <script src="/app.js"></script>
 </body>
 
