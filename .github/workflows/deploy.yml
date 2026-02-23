@@ -2,30 +2,40 @@ name: Deploy Alpha Sentinel to VPS
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+  workflow_dispatch: {}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Deploy to VPS via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            set -e
-            cd ${{ secrets.VPS_PATH }}
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
 
-            echo "Pulling latest code..."
-            git fetch origin
-            git reset --hard origin/main
+      - name: Add host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
 
-            echo "Rebuilding containers..."
-            docker compose up -d --build --force-recreate
+      - name: Deploy (git pull + compose up)
+        run: |
+          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" << 'SSH'
+          set -e
+          cd "${{ secrets.VPS_PATH }}"
 
-            echo "Health check..."
-            curl -fsS http://127.0.0.1:8001/health || true
+          # Make sure repo is correct + updated
+          git fetch --all
+          git checkout main
+          git pull --rebase
+
+          # Rebuild + restart containers
+          docker compose up -d --build
+
+          docker compose ps
+          curl -sS http://127.0.0.1:8001/health || true
+          SSH
