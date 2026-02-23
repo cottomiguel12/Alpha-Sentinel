@@ -134,6 +134,13 @@ class CreateUserIn(BaseModel):
     role: str = "viewer"
 
 
+class TideTestIn(BaseModel):
+    interval: str = "1m"
+    net_call_premium: float = 1000.0
+    net_put_premium: float = 500.0
+    net_volume: int = 100
+
+
 # ----------------------------
 # App lifespan (init DB + admin upsert)
 # ----------------------------
@@ -270,20 +277,20 @@ async def alerts(
     dte_min: Optional[int] = None,
     dte_max: Optional[int] = None,
     sort_score: Optional[str] = None,
+    include_sim: bool = False,
     user=Depends(require_user)
 ):
-    uw_enabled = int(os.environ.get("UW_ENABLED", "0")) == 1
-    if not uw_enabled:
-        return {"ok": True, "items": [], "meta": {"uw_enabled": False}}
-
     source_env = os.environ.get("ALERTS_SOURCE", "archive").strip().lower()
     table_name = "alerts_live" if source_env == "live" else "alerts"
 
     limit = max(1, min(int(limit), 500))
 
     query = f"SELECT * FROM {table_name}"
-    conditions = ["source = 'UW'"]
+    conditions = []
     params = []
+
+    if not include_sim:
+        conditions.append("(source IS NULL OR LOWER(source) != 'sim')")
 
     if symbol:
         conditions.append("ticker = ?")
@@ -318,7 +325,7 @@ async def alerts(
         rows = conn.execute(query, tuple(params)).fetchall()
         items = _format_alerts(rows, conn)
 
-    return {"ok": True, "items": items, "meta": {"uw_enabled": True}}
+    return {"ok": True, "items": items}
 
 @APP.get("/sim/alerts")
 async def sim_alerts(
@@ -337,7 +344,7 @@ async def sim_alerts(
     limit = max(1, min(int(limit), 500))
 
     query = f"SELECT * FROM {table_name}"
-    conditions = ["(source IN ('SIM', 'CSV') OR source IS NULL)"]
+    conditions = ["LOWER(source) = 'sim'"]
     params = []
 
     if symbol:
@@ -389,7 +396,7 @@ async def alerts_recent(window_sec: int = 900, limit: int = 15, user=Depends(req
             f"""
             SELECT *
             FROM {table_name}
-            WHERE ts >= ? AND source = 'UW'
+            WHERE ts >= ? AND (source IS NULL OR LOWER(source) != 'sim')
             ORDER BY score_total DESC
             LIMIT ?
             """,
@@ -398,6 +405,63 @@ async def alerts_recent(window_sec: int = 900, limit: int = 15, user=Depends(req
         items = _format_alerts(rows, conn)
 
     return {"ok": True, "items": items}
+
+
+# ----------------------------
+# Unusual Whales Integration
+# ----------------------------
+@APP.get("/uw/status")
+async def get_uw_status(user=Depends(require_user)):
+    uw_enabled = os.environ.get("UW_ENABLED", "0") == "1"
+    return {"ok": True, "enabled": uw_enabled}
+
+
+@APP.get("/uw/tide/latest")
+async def get_uw_tide_latest(interval: str = "1m", limit: int = 120, user=Depends(require_user)):
+    uw_enabled = os.environ.get("UW_ENABLED", "0") == "1"
+    limit = max(1, min(limit, 1000))
+    with db() as conn:
+        rows = conn.execute(
+            """
+            SELECT * FROM market_tide_ticks
+            WHERE interval = ?
+            ORDER BY ts DESC LIMIT ?
+            """,
+            (interval, limit),
+        ).fetchall()
+    return {"ok": True, "enabled": uw_enabled, "items": [dict(r) for r in rows]}
+
+
+@APP.get("/uw/tide/range")
+async def get_uw_tide_range(date: str, interval: str = "1m", user=Depends(require_user)):
+    uw_enabled = os.environ.get("UW_ENABLED", "0") == "1"
+    with db() as conn:
+        rows = conn.execute(
+            """
+            SELECT * FROM market_tide_ticks
+            WHERE date = ? AND interval = ?
+            ORDER BY ts ASC
+            """,
+            (date, interval),
+        ).fetchall()
+    return {"ok": True, "enabled": uw_enabled, "items": [dict(r) for r in rows]}
+
+
+@APP.post("/uw/test_ingest")
+async def post_uw_test_ingest(body: TideTestIn, user=Depends(require_role("admin"))):
+    uw_enabled = os.environ.get("UW_ENABLED", "0") == "1"
+    now_dt = datetime.now(timezone.utc)
+    date_str = now_dt.strftime("%Y-%m-%d")
+    ts_str = now_dt.isoformat()
+    with db() as conn:
+        conn.execute(
+            """
+            INSERT INTO market_tide_ticks (ts, interval, date, net_call_premium, net_put_premium, net_volume, raw, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (ts_str, body.interval, date_str, body.net_call_premium, body.net_put_premium, body.net_volume, "{}", now_iso())
+        )
+    return {"ok": True, "enabled": uw_enabled}
 
 
 # ----------------------------
