@@ -772,8 +772,15 @@
             if (ivl) body.interval_sec = parseFloat(ivl);
             if (cur) body.cursor_id = parseInt(cur);
 
+            // Clear local UI state for fresh start
+            document.getElementById('sim-alerts-container').innerHTML = '<p class="empty-state text-[11px]">Wiping stream and starting fresh...</p>';
+            simActivityHistory = [];
+            simPeak = 0;
+            updateSimChart();
+
             await fetchApi('/sim/start', { method: 'POST', body: JSON.stringify(body) });
             fetchSimState();
+            fetchSimAlerts(); // Immediate poll
         }
 
         async function simPause() {
@@ -787,7 +794,14 @@
         }
 
         async function simReset() {
-            if (!confirm('Are you sure you want to flush the simulation stream table?')) return;
+            if (!confirm('Are you sure you want to flush the simulation stream table and STOP the engine?')) return;
+
+            // Clear UI immediately
+            document.getElementById('sim-alerts-container').innerHTML = '<p class="empty-state text-[11px]">Stream flushed. Engine stopped.</p>';
+            simActivityHistory = [];
+            simPeak = 0;
+            updateSimChart();
+
             await fetchApi('/sim/reset', { method: 'POST' });
             fetchSimState();
         }

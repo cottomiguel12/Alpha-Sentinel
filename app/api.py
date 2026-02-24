@@ -748,6 +748,10 @@ async def get_sim_status(user=Depends(require_user)):
 @APP.post("/sim/start")
 async def start_sim(body: Optional[SimSettingsIn] = None, user=Depends(require_role("sentinel"))):
     with db() as conn:
+        # User requested that "Start" always resets the stream to avoid duplicates/carry-over
+        conn.execute("DELETE FROM alerts_live")
+        conn.execute("UPDATE sim_state SET cursor_id=1, last_tick_ts=NULL WHERE id=1")
+
         if body:
             updates = []
             params = []
@@ -758,6 +762,7 @@ async def start_sim(body: Optional[SimSettingsIn] = None, user=Depends(require_r
                 updates.append("interval_sec=?")
                 params.append(float(body.interval_sec))
             if body.cursor_id is not None:
+                # If they explicitly provided a cursor_id in the start body, override the reset choice
                 updates.append("cursor_id=?")
                 params.append(int(body.cursor_id))
             
@@ -766,7 +771,7 @@ async def start_sim(body: Optional[SimSettingsIn] = None, user=Depends(require_r
                 conn.execute(query, tuple(params))
                 
         conn.execute("UPDATE sim_state SET is_running=1, is_paused=0 WHERE id=1")
-    return {"ok": True, "message": "Simulation started"}
+    return {"ok": True, "message": "Simulation started and stream reset"}
 
 
 @APP.post("/sim/pause")
@@ -794,8 +799,9 @@ async def stop_sim(user=Depends(require_role("sentinel"))):
 async def reset_sim(user=Depends(require_role("sentinel"))):
     with db() as conn:
         conn.execute("DELETE FROM alerts_live")
-        conn.execute("UPDATE sim_state SET cursor_id=1, last_tick_ts=NULL, dataset_hash=NULL WHERE id=1")
-    return {"ok": True, "message": "Simulation data cleared and cursor reset"}
+        # Reset cursor, clear hash, and STOP the engine
+        conn.execute("UPDATE sim_state SET cursor_id=1, last_tick_ts=NULL, dataset_hash=NULL, is_running=0, is_paused=0 WHERE id=1")
+    return {"ok": True, "message": "Simulation halted, data cleared and cursor reset"}
 
 
 @APP.get("/sim/filter_stats")
