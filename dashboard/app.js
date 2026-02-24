@@ -407,9 +407,11 @@ async function loadAlerts(isBackground = false) {
     const cardsWrap = document.getElementById('alerts-cards');
     const tbody = document.querySelector('#alerts-table tbody');
     if (!cardsWrap && !tbody) return;
-    if (!location.pathname.includes('index.html') &&
-        !location.pathname.includes('simulation_live.html') &&
-        location.pathname !== '/') return;
+    const path = window.location.pathname;
+    const isSimPage = path.includes('simulation');
+    const isMainPage = path.includes('index.html') || path === '/' || path === '';
+
+    if (!isMainPage && !isSimPage) return;
 
     const loadingHtml = '<p class="empty-state">Loading alerts…</p>';
     const errorHtml = '<p class="empty-state text-rose-400">Error loading alerts</p>';
@@ -925,7 +927,7 @@ function updatePaginationUI() {
     const prevBtn = document.getElementById('btn-prev-page');
     const nextBtn = document.getElementById('btn-next-page');
     const pageInfo = document.getElementById('ui-page-info');
-    const totalEl = document.getElementById('ui-total-alerts');
+    const totalEl = document.getElementById('ui-total-alerts') || document.getElementById('ui-total-contracts');
     const liveBtn = document.getElementById('btn-back-live');
 
     if (prevBtn) prevBtn.disabled = currentPage <= 1;
