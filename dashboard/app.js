@@ -6,10 +6,19 @@ let currentTypeFilter = '';
 let currentSortScore = '';
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
-function getToken() { return localStorage.getItem('sentinel_token'); }
-function setToken(t) { localStorage.setItem('sentinel_token', t); }
+function getToken() {
+    return localStorage.getItem('sentinel_token') ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('access_token');
+}
+function setToken(t) {
+    localStorage.setItem('sentinel_token', t);
+    localStorage.setItem('token', t); // backwards compatibility
+}
 function logout() {
     localStorage.removeItem('sentinel_token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
     window.location.href = '/login.html';
 }
 
@@ -22,19 +31,29 @@ function formatPercent(val) {
     if (val == null) return '—';
     return val.toFixed(1) + '%';
 }
-function formatDate(isoStr) {
+function formatDate(isoStr, forceDate = false) {
     if (!isoStr) return '—';
     const d = new Date(isoStr);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+
+    const timePart = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    if (!forceDate && isToday) return timePart;
+
+    const datePart = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    const yearPart = d.getFullYear() !== now.getFullYear() ? `'${String(d.getFullYear()).slice(-2)}` : '';
+    return `${datePart}${yearPart ? ' ' + yearPart : ''} ${timePart}`;
 }
 function formatAge(isoStr) {
     if (!isoStr) return '—';
     const d = new Date(isoStr);
     const diff = Math.floor((Date.now() - d.getTime()) / 60000);
+    if (diff < 0) return 'future';
     if (diff < 1) return 'now';
     if (diff < 60) return diff + 'm';
     if (diff < 1440) return Math.floor(diff / 60) + 'h';
-    return Math.floor(diff / 1440) + 'd';
+    if (diff < 43200) return Math.floor(diff / 1440) + 'd';
+    return 'Archive';
 }
 function scoreColor(score) {
     if (score == null) return 'chip-neutral';
@@ -57,15 +76,51 @@ async function fetchApi(endpoint, opts = {}) {
 
 // ── Health ────────────────────────────────────────────────────────────────────
 async function updateHealth() {
-    const [data, uw] = await Promise.all([fetchApi('/health'), fetchApi('/uw/status')]);
-    if (data?.ok) {
-        const el = document.getElementById('health-ts');
-        if (el) el.textContent = `Updated ${formatDate(new Date())}`;
-    }
-    const badge = document.getElementById('uw-badge');
-    if (badge) {
-        if (uw && !uw.enabled) badge.classList.remove('hidden');
-        else badge.classList.add('hidden');
+    const isSim = location.pathname.includes('simulation_live.html') || location.pathname.includes('simulation.html');
+    const source = isSim ? 'sim' : 'live';
+
+    try {
+        const [healthRes, uw] = await Promise.all([
+            fetchApi(`/health?source=${source}`),
+            fetchApi('/uw/status')
+        ]);
+
+        if (healthRes?.ok) {
+            const h = healthRes.snapshot;
+            const tsEl = document.getElementById('health-ts');
+            if (tsEl) {
+                const prefix = isSim ? 'SIM: ' : 'LIVE: ';
+                tsEl.textContent = `${prefix}${formatDate(new Date())}`;
+            }
+
+            if (h) {
+                // Update ribbon stats if elements exist
+                const evEl = document.getElementById('stat-events');
+                if (evEl) {
+                    evEl.style.display = 'block';
+                    evEl.querySelector('.sc-val').textContent = h.events_per_min || 0;
+                }
+                const alEl = document.getElementById('stat-alertsm');
+                if (alEl) {
+                    alEl.style.display = 'block';
+                    alEl.querySelector('.sc-val').textContent = h.alerts_per_min || 0;
+                }
+                const errEl = document.getElementById('stat-errors');
+                if (errEl) {
+                    errEl.style.display = 'block';
+                    errEl.querySelector('.sc-val').textContent = h.errors_15m || 0;
+                    errEl.querySelector('.sc-val').style.color = h.errors_15m > 0 ? '#f87171' : '#64748b';
+                }
+            }
+        }
+
+        const badge = document.getElementById('uw-badge');
+        if (badge) {
+            if (uw && !uw.enabled) badge.classList.remove('hidden');
+            else badge.classList.add('hidden');
+        }
+    } catch (e) {
+        console.error("Health update failed:", e);
     }
 }
 
@@ -326,7 +381,9 @@ async function loadAlerts(isBackground = false) {
     const cardsWrap = document.getElementById('alerts-cards');
     const tbody = document.querySelector('#alerts-table tbody');
     if (!cardsWrap && !tbody) return;
-    if (!location.pathname.includes('index.html') && location.pathname !== '/') return;
+    if (!location.pathname.includes('index.html') &&
+        !location.pathname.includes('simulation_live.html') &&
+        location.pathname !== '/') return;
 
     const loadingHtml = '<p class="empty-state">Loading alerts…</p>';
     const errorHtml = '<p class="empty-state text-rose-400">Error loading alerts</p>';
@@ -342,7 +399,8 @@ async function loadAlerts(isBackground = false) {
     if (currentTypeFilter) params.append('type', currentTypeFilter);
     if (currentSortScore) params.append('sort_score', currentSortScore);
 
-    const data = await fetchApi(`/alerts?${params}`);
+    const endpoint = location.pathname.includes('simulation_live.html') ? '/sim/alerts' : '/alerts';
+    const data = await fetchApi(`${endpoint}?${params}`);
     if (!data?.items) {
         if (cardsWrap) cardsWrap.innerHTML = errorHtml;
         if (tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center py-8 text-rose-400">Error loading alerts</td></tr>`;

@@ -624,9 +624,28 @@
 
         <!-- Live Sim Stream -->
         <div class="card-panel">
-            <h3 class="text-sm font-bold text-white mb-2">Simulated Live Stream</h3>
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-bold text-white">Simulated Live Stream</h3>
+                <a href="/simulation_live.html"
+                    class="px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20 text-primary text-[11px] font-bold hover:bg-primary/20 transition-colors flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[14px]">dashboard</span>
+                    Full Dash
+                </a>
+            </div>
             <p class="text-[11px] text-muted mb-4 opacity-80">Displaying alerts injected via simulation worker
                 (source='SIM').</p>
+
+            <!-- Activity Sparkline / Chart Placeholder -->
+            <div class="mb-4 p-3 bg-black/20 rounded-lg border border-white/5">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[9px] font-bold text-muted uppercase tracking-wider">Activity (Alerts/Tick)</span>
+                    <span id="sim-chart-peak" class="text-[9px] font-bold text-primary">Peak: —</span>
+                </div>
+                <div id="sim-activity-chart-wrap" class="h-16 w-full flex items-end gap-[1px]">
+                    <!-- Sparkline bars will be injected here -->
+                </div>
+            </div>
+
             <div id="sim-alerts-container" class="space-y-1.5 max-h-[400px] overflow-y-auto pr-2 custom-scroll">
                 <p class="empty-state text-[11px]">Waiting for sim activity...</p>
             </div>
@@ -835,9 +854,22 @@
             else bar.style.background = '#f87171';
         }
 
+        let simActivityHistory = [];
+        let simPeak = 0;
+
         async function fetchSimAlerts() {
             const data = await fetchApi('/sim/alerts?limit=25');
             const container = document.getElementById('sim-alerts-container');
+
+            // Track activity for chart
+            const batchSize = data?.items?.length || 0;
+            const latestTs = data?.items?.[0]?.ts || null;
+            simActivityHistory.push({ val: batchSize, ts: latestTs });
+
+            if (simActivityHistory.length > 50) simActivityHistory.shift();
+            if (batchSize > simPeak) simPeak = batchSize;
+            updateSimChart();
+
             if (data && data.items && data.items.length) {
                 container.innerHTML = '';
                 data.items.forEach(alert => {
@@ -845,8 +877,8 @@
                     row.className = 'text-[11px] p-2 bg-[var(--surface2)] rounded flex justify-between items-center border border-[var(--border)] border-l-[3px] shadow-sm transition-all hover:opacity-80';
                     row.style.borderLeftColor = alert.opt_type === 'C' ? '#34d399' : '#f87171';
                     row.innerHTML = `
-                        <span class="text-slate-400 font-mono w-14 shrink-0">${formatDate(alert.ts)}</span>
-                        <span class="text-white font-bold w-14 shrink-0 truncate">${alert.ticker}</span>
+                        <span class="text-slate-400 font-mono w-32 shrink-0">${formatDate(alert.ts)}</span>
+                        <span class="text-white font-bold w-12 shrink-0 truncate">${alert.ticker}</span>
                         <span class="text-muted w-14 shrink-0 truncate">$${alert.strike}${alert.opt_type}</span>
                         <span class="font-bold w-14 text-right shrink-0">$${(alert.premium / 1000).toFixed(1)}k</span>
                         <span class="text-white font-bold w-12 text-center ml-2 shrink-0 chip ${scoreColor(alert.score_total)}">${alert.score_total.toFixed(1)}</span>
@@ -858,6 +890,22 @@
             }
         }
 
+        function updateSimChart() {
+            const wrap = document.getElementById('sim-activity-chart-wrap');
+            if (!wrap) return;
+
+            document.getElementById('sim-chart-peak').textContent = `Peak: ${simPeak}`;
+
+            const vals = simActivityHistory.map(d => d.val);
+            const maxVal = Math.max(...vals, 10);
+            wrap.innerHTML = simActivityHistory.map(d => {
+                const height = Math.max(2, (d.val / maxVal) * 100);
+                const color = d.val === 0 ? 'rgba(255,255,255,0.05)' : 'var(--primary)';
+                const title = d.ts ? `Trade Time: ${formatDate(d.ts, true)}\\nAlerts: ${d.val}` : 'No activity';
+                return `<div title="${title}" style="flex:1; height:${height}%; background:${color}; border-radius:1px; cursor:help;"></div>`;
+            }).join('');
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             fetchSimState();
             fetchSourceEnv();
@@ -865,7 +913,7 @@
             fetchSimAlerts();
             setInterval(fetchSimState, 2000);    // 2s polling
             setInterval(fetchFilterStats, 3000); // 3s polling
-            setInterval(fetchSimAlerts, 5000);   // 5s polling for alerts
+            setInterval(fetchSimAlerts, 2000);   // Faster alerts poll for smoother chart
         });
     </script>
 </body>
