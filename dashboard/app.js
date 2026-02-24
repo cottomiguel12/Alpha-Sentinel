@@ -222,14 +222,14 @@ function openDetailPopup(item) {
 
     // Legs section for positions
     if (isPosition) {
-        let legsHtml = '<div style="margin-top:20px; border-top:1px solid var(--border); padding-top:16px;">';
-        legsHtml += '<h4 style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em">Strategy Legs</h4>';
-        legsHtml += '<div style="display:flex; flex-direction:column; gap:8px;">';
+        let legsHtml = '<div class="strategy-legs">';
+        legsHtml += '<h4 class="strategy-title"><span class="material-symbols-outlined" style="font-size:14px">account_tree</span> Strategy Legs</h4>';
+        legsHtml += '<div class="strategy-list">';
 
         item.legs.forEach(leg => {
             const legColor = leg.opt_type === 'C' ? 'text-emerald-400' : 'text-rose-400';
             legsHtml += `
-                <div style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px; display:flex; align-items:center; justify-content:between;">
+                <div class="leg-card">
                     <div style="flex:1">
                         <div style="font-weight:700; color:#fff; font-size:13px">$${leg.strike} ${leg.opt_type} ${leg.exp}</div>
                         <div style="font-size:11px; color:var(--muted); margin-top:2px">
