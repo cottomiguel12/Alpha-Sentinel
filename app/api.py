@@ -692,7 +692,7 @@ async def start_sim(body: Optional[SimSettingsIn] = None, user=Depends(require_r
     with db() as conn:
         # User requested that "Start" always resets the stream to avoid duplicates/carry-over
         conn.execute("DELETE FROM sim_alerts")
-        conn.execute("DELETE FROM raw_sim_alerts")
+        # Do NOT delete from raw_sim_alerts; that is our source feed!
         conn.execute("UPDATE sim_state SET cursor_id=1, last_tick_ts=NULL WHERE id=1")
 
         if body:
@@ -832,17 +832,17 @@ async def trigger_test_alert(user=Depends(require_role("sentinel"))):
         
         conn.execute(
             """
-            INSERT INTO alerts_live 
+            INSERT INTO sim_alerts 
             (ts, ticker, exp, strike, opt_type, premium, size, volume, oi, bid, ask, spread_pct, spot, otm_pct, dte, score_total, tags, source, contract_key)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (ts, ticker, exp, strike, opt_type, 1500000.0, 500, 1000, 200, 2.9, 3.1, 0.06, 395.0, 0.012, 30, 99.9, "SIM_TEST", "synthetic", ck)
+            (ts, ticker, exp, strike, opt_type, 1500000.0, 500, 1000, 200, 2.9, 3.1, 0.06, 395.0, 0.012, 30, 99.9, "SIM_TEST", "sim", ck)
         )
         
         row_id_res = conn.execute("SELECT last_insert_rowid() as id").fetchone()
         row_id = row_id_res["id"]
         
-        new_row = conn.execute("SELECT * FROM alerts_live WHERE id=?", (row_id,)).fetchone()
+        new_row = conn.execute("SELECT * FROM sim_alerts WHERE id=?", (row_id,)).fetchone()
         item = _format_alerts([new_row], conn)[0]
         
     return {"ok": True, "message": "Test alert inserted", "alert": item}
