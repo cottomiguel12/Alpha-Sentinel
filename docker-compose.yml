@@ -36,7 +36,7 @@ services:
       # OPTIONS_CSV: ""  # legacy single-file fallback (leave blank when OPTIONS_CSVS is set)
       AGENT_INTERVAL_SEC: "1.5"
       MAX_ALERTS_PER_TICK: "25"
-      REPLAY_FROM_START: "0"
+      REPLAY_FROM_START: "1"
       WATCHLIST_REFRESH_SEC: "5"
       UW_ENABLED: "0"
       UW_API_KEY: ""
