@@ -478,6 +478,24 @@
             </div>
         </div>
 
+        <!-- Dataset Reset Warning -->
+        <div id="reset-alert" class="px-4 mb-4 hidden">
+            <div class="bg-rose-500/10 border border-rose-500/30 rounded-xl p-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-rose-500">warning</span>
+                    <div>
+                        <h4 class="text-rose-500 font-bold text-sm">Dataset Version Mismatch</h4>
+                        <p class="text-rose-500/70 text-[11px]">CSV source files have been updated. Recommended: Reset
+                            Data to sync.</p>
+                    </div>
+                </div>
+                <button onclick="simReset()"
+                    class="bg-rose-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-md hover:bg-rose-600 transition-colors">
+                    Reset Now
+                </button>
+            </div>
+        </div>
+
         <!-- Metric Cards -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 px-4 mb-4">
             <div class="card-panel m-0 flex flex-col items-center justify-center p-4">
@@ -697,6 +715,12 @@
                 const dot = document.getElementById('sim-pulse');
                 const label = document.getElementById('ui-sim-status');
                 const navLabel = document.getElementById('health-ts');
+
+                if (res.needs_reset) {
+                    document.getElementById('reset-alert').classList.remove('hidden');
+                } else {
+                    document.getElementById('reset-alert').classList.add('hidden');
+                }
 
                 if (res.state.is_running === 1) {
                     if (res.state.is_paused === 1) {
