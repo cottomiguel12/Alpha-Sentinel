@@ -174,18 +174,24 @@ def iter_sim():
         for d in kept_dicts:
             last_id = int(d["id"])
 
+            ticker = d.get("ticker", "")
+            trade_time_raw = d.get("trade_time_raw", "")
+            trade_ts = d.get("ts", now_ts)
+            
+            # Generate a stable trade_id for multi-leg grouping
+            # (ticker + raw_time + ts) should uniquely identify a trade event including its legs
+            import hashlib
+            raw_id_str = f"{ticker}_{trade_time_raw}_{trade_ts}"
+            trade_id = hashlib.md5(raw_id_str.encode()).hexdigest()
+
             ck = d.get("contract_key")
             if not ck:
                 ck = normalize_contract_key(
-                    d.get("ticker", ""), d.get("exp", ""),
+                    ticker, d.get("exp", ""),
                     d.get("strike", 0.0), d.get("opt_type", "")
                 )
 
-            # We want to keep the historical trade time `ts` from the CSV as `ts`.
-            # But we update `ingested_at` to `now_ts` so the dashboard knows it just arrived.
-            trade_ts = d.get("ts", now_ts)
             ingested_at = now_ts
-            trade_time_raw = d.get("trade_time_raw", "")
             trade_tz = d.get("trade_tz", "UTC")
 
             conn.execute(
@@ -193,12 +199,12 @@ def iter_sim():
                 INSERT INTO alerts_live
                 (ts, ticker, exp, strike, opt_type, premium, size, volume, oi,
                  bid, ask, spread_pct, spot, otm_pct, dte, score_total,
-                 tags, reason_codes, source, contract_key, ingested_at, trade_time_raw, trade_tz)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 tags, reason_codes, source, contract_key, ingested_at, trade_time_raw, trade_tz, trade_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     trade_ts,
-                    d.get("ticker"),
+                    ticker,
                     d.get("exp"),
                     d.get("strike"),
                     d.get("opt_type"),
@@ -219,7 +225,8 @@ def iter_sim():
                     ck,
                     ingested_at,
                     trade_time_raw,
-                    trade_tz
+                    trade_tz,
+                    trade_id
                 )
             )
             inserted_count += 1

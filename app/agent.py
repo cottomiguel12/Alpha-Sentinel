@@ -656,18 +656,24 @@ class SentinelAgent:
                 try:
                     target_table = "raw_sim_alerts" if str(a.source).upper().startswith("CSV") else "alerts"
                     ck = _normalize_contract_key(a.contract_key)
+                    
+                    # Generate a stable trade_id for multi-leg grouping
+                    import hashlib
+                    raw_id_str = f"{a.ticker}_{a.trade_time_raw}_{a.ts}"
+                    trade_id = hashlib.md5(raw_id_str.encode()).hexdigest()
+
                     if has_ck and has_source and has_ingest:
                         conn.execute(
                             f"""
                             INSERT INTO {target_table}
-                            (ts,contract_key,ticker,exp,strike,opt_type,premium,size,volume,oi,bid,ask,spread_pct,spot,otm_pct,dte,score_total,tags,reason_codes,source,ingested_at,trade_time_raw,trade_tz)
-                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                            (ts,contract_key,ticker,exp,strike,opt_type,premium,size,volume,oi,bid,ask,spread_pct,spot,otm_pct,dte,score_total,tags,reason_codes,source,ingested_at,trade_time_raw,trade_tz,trade_id)
+                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                             """,
                             (
                                 a.ts, ck, a.ticker, a.exp, a.strike, a.opt_type,
                                 a.premium, a.size, a.volume, a.oi, a.bid, a.ask, a.spread_pct,
                                 a.spot, a.otm_pct, a.dte, a.score_total, a.tags, a.reason_codes,
-                                a.source, a.ingested_at, a.trade_time_raw, a.trade_tz
+                                a.source, a.ingested_at, a.trade_time_raw, a.trade_tz, trade_id
                             ),
                         )
                     elif has_ck and has_source:
