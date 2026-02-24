@@ -134,6 +134,38 @@ def init_db():
         conn.execute("CREATE INDEX IF NOT EXISTS idx_alerts_live_ck_ts ON alerts_live(contract_key, ts)")
 
         conn.execute("""
+        CREATE TABLE IF NOT EXISTS sim_alerts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          ts TEXT NOT NULL,
+          ticker TEXT NOT NULL,
+          exp TEXT NOT NULL,
+          strike REAL NOT NULL,
+          opt_type TEXT NOT NULL,
+          premium REAL,
+          size INTEGER,
+          volume INTEGER,
+          oi INTEGER,
+          bid REAL,
+          ask REAL,
+          spread_pct REAL,
+          spot REAL,
+          otm_pct REAL,
+          dte INTEGER,
+          score_total REAL NOT NULL,
+          tags TEXT,
+          reason_codes TEXT,
+          source TEXT,
+          contract_key TEXT,
+          ingested_at TEXT,
+          trade_time_raw TEXT,
+          trade_tz TEXT,
+          trade_id TEXT
+        )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_sim_alerts_ts ON sim_alerts(ts)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_sim_alerts_ck_ts ON sim_alerts(contract_key, ts)")
+
+        conn.execute("""
         CREATE TABLE IF NOT EXISTS sim_state (
           id INTEGER PRIMARY KEY,
           is_running INTEGER NOT NULL DEFAULT 0,
@@ -274,7 +306,7 @@ def init_db():
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_market_regime_snapshots_ts ON market_regime_snapshots(ts)")
 
-        for table in ["alerts", "alerts_live", "health_snapshots"]:
+        for table in ["alerts", "alerts_live", "sim_alerts", "health_snapshots"]:
             existing_cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
             if "source" not in existing_cols:
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN source TEXT")
@@ -284,7 +316,7 @@ def init_db():
             conn.execute("ALTER TABLE sim_state ADD COLUMN dataset_hash TEXT")
 
         # Add non-destructive column migrations for timestamps
-        for table in ["alerts", "alerts_live"]:
+        for table in ["alerts", "alerts_live", "sim_alerts"]:
             existing_cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
             if "ingested_at" not in existing_cols:
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN ingested_at TEXT")

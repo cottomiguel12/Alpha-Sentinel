@@ -360,7 +360,7 @@ async def sim_alerts(
     limit = max(1, min(int(limit), 500))
     offset = max(0, int(offset))
 
-    base_query = "FROM alerts_live"
+    base_query = "FROM sim_alerts"
     conditions = ["LOWER(source) = 'sim'"]
     params = []
 
@@ -677,7 +677,7 @@ async def get_sim_status(user=Depends(require_user)):
             conn.execute("UPDATE sim_state SET dataset_hash=? WHERE id=1", (current_version,))
             stored_version = current_version
             
-        count_row = conn.execute("SELECT COUNT(*) as c FROM alerts_live").fetchone()
+        count_row = conn.execute("SELECT COUNT(*) as c FROM sim_alerts").fetchone()
         return {
             "ok": True, 
             "state": dict(state),
@@ -691,7 +691,7 @@ async def get_sim_status(user=Depends(require_user)):
 async def start_sim(body: Optional[SimSettingsIn] = None, user=Depends(require_role("sentinel"))):
     with db() as conn:
         # User requested that "Start" always resets the stream to avoid duplicates/carry-over
-        conn.execute("DELETE FROM alerts_live")
+        conn.execute("DELETE FROM sim_alerts")
         conn.execute("DELETE FROM raw_sim_alerts")
         conn.execute("UPDATE sim_state SET cursor_id=1, last_tick_ts=NULL WHERE id=1")
 
@@ -741,7 +741,7 @@ async def stop_sim(user=Depends(require_role("sentinel"))):
 @APP.post("/sim/reset")
 async def reset_sim(user=Depends(require_role("sentinel"))):
     with db() as conn:
-        conn.execute("DELETE FROM alerts_live")
+        conn.execute("DELETE FROM sim_alerts")
         conn.execute("DELETE FROM raw_sim_alerts")
         # Reset cursor, clear hash, and STOP the engine
         conn.execute("UPDATE sim_state SET cursor_id=1, last_tick_ts=NULL, dataset_hash=NULL, is_running=0, is_paused=0 WHERE id=1")

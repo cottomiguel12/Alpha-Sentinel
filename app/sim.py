@@ -196,7 +196,7 @@ def iter_sim():
 
             conn.execute(
                 """
-                INSERT INTO alerts_live
+                INSERT INTO sim_alerts
                 (ts, ticker, exp, strike, opt_type, premium, size, volume, oi,
                  bid, ask, spread_pct, spot, otm_pct, dte, score_total,
                  tags, reason_codes, source, contract_key, ingested_at, trade_time_raw, trade_tz, trade_id)
