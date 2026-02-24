@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Alpha Sentinel – Simulation Live Stream" />
+    <title>Alpha Sentinel – Sim Live Flow</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { primary: '#3c83f6', 'bg-dark': '#0d1117' },
+                    fontFamily: { display: ['Inter', 'sans-serif'] }
+                }
+            }
+        };
+    </script>
+    <style>
+        /* ── Design tokens ─────────────────────────────────────────── */
+        :root {
+            --primary: #3c83f6;
+            --bg: #0d1117;
+            --surface: #161b22;
+            --surface2: #1f2937;
+            --border: #2d3748;
+            --text: #e2e8f0;
+            --muted: #64748b;
+            --header-h: 52px;
+            --nav-h: 56px;
+        }
+
+        /* ── Reset / base ──────────────────────────────────────────── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        html {
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100dvh;
+            overflow-x: hidden;
+        }
+
+        /* ── Compact header ────────────────────────────────────────── */
+        .site-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            height: var(--header-h);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-brand .logo-icon {
+            width: 28px;
+            height: 28px;
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .header-brand .brand-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -0.01em;
+        }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, .25);
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0.4
+            }
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-logout-compact {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            min-height: 32px;
+            transition: color .15s, background .15s;
+        }
+
+        .btn-logout-compact:hover {
+            color: #f87171;
+            background: rgba(248, 113, 113, .08);
+        }
+
+        .btn-logout-compact .material-symbols-outlined {
+            font-size: 16px;
+        }
+
+        .btn-logout-compact .logout-label {
+            display: none;
+        }
+
+        @media (min-width: 360px) {
+            .btn-logout-compact .logout-label {
+                display: inline;
+            }
+        }
+
+        .user-pill {
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .user-pill {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 12px;
+                color: var(--muted);
+            }
+        }
+
+        /* ── Tab nav ── */
+        .tab-nav {
+            display: none;
+        }
+
+        @media (min-width: 431px) {
+            .tab-nav {
+                display: flex;
+                border-bottom: 1px solid var(--border);
+                padding: 0 16px;
+                background: var(--bg);
+            }
+
+            .tab-nav a {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 10px 16px;
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--muted);
+                border-bottom: 2px solid transparent;
+                transition: color .15s, border-color .15s;
+                text-decoration: none;
+            }
+
+            .tab-nav a.active,
+            .tab-nav a:hover {
+                color: #fff;
+            }
+
+            .tab-nav a.active {
+                border-bottom-color: var(--primary);
+            }
+
+            .tab-nav a .material-symbols-outlined {
+                font-size: 18px;
+            }
+        }
+
+        /* ── Bottom nav ── */
+        .bottom-nav {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            height: var(--nav-h);
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+        }
+
+        .bottom-nav a {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--muted);
+            transition: color .15s;
+        }
+
+        .bottom-nav a.active {
+            color: var(--primary);
+        }
+
+        .bottom-nav a .material-symbols-outlined {
+            font-size: 22px;
+        }
+
+        @media (min-width: 431px) {
+            .bottom-nav {
+                display: none;
+            }
+        }
+
+        /* ── Ribbon ── */
+        .status-ribbon {
+            display: grid;
+            gap: 8px;
+            grid-template-columns: repeat(4, 1fr);
+            padding: 12px 16px;
+        }
+
+        @media (min-width: 640px) {
+            .status-ribbon {
+                grid-template-columns: repeat(7, 1fr);
+            }
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 10px;
+        }
+
+        .stat-card .sc-label {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .stat-card .sc-val {
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        /* ── Filter bar ── */
+        .filter-bar {
+            padding: 10px 16px;
+            position: sticky;
+            top: var(--header-h);
+            background: rgba(13, 17, 23, 0.95);
+            backdrop-filter: blur(8px);
+            z-index: 40;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 12px;
+        }
+
+        @media (min-width: 431px) {
+            .filter-bar {
+                top: calc(var(--header-h) + 43px);
+                border-bottom: none;
+                margin-bottom: 0;
+            }
+        }
+
+        .filter-toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .btn-filter-toggle {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            min-height: 36px;
+            transition: color .15s, border-color .15s;
+        }
+
+        .btn-filter-toggle:hover {
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .type-chips {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .type-filter-btn {
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .15s;
+            min-height: 30px;
+        }
+
+        .type-filter-btn.active,
+        .type-filter-btn:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        #filter-drawer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height .3s ease;
+        }
+
+        #filter-drawer.drawer-open {
+            max-height: 200px;
+        }
+
+        .filter-inner {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px 0 4px;
+        }
+
+        .filter-search {
+            position: relative;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-search .material-symbols-outlined {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+            font-size: 18px;
+            pointer-events: none;
+        }
+
+        #filter-symbol {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: #fff;
+            padding: 8px 12px 8px 36px;
+            font-size: 13px;
+            outline: none;
+            transition: border-color .15s;
+        }
+
+        #filter-symbol:focus {
+            border-color: var(--primary);
+        }
+
+        /* ── Layout ── */
+        .page-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+            padding-bottom: calc(var(--nav-h) + 8px);
+        }
+
+        @media (min-width: 431px) {
+            .page-content {
+                padding-bottom: 24px;
+            }
+        }
+
+        .main-layout {
+            display: flex;
+            min-height: 0;
+            gap: 0;
+        }
+
+        .content-col {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .sidebar {
+            display: none;
+            width: 280px;
+            flex-shrink: 0;
+            border-left: 1px solid var(--border);
+        }
+
+        @media (min-width: 900px) {
+            .sidebar {
+                display: flex;
+                flex-direction: column;
+            }
+        }
+
+        /* ── Components ── */
+        #alerts-cards {
+            padding: 0 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        @media (min-width: 431px) {
+            #alerts-cards {
+                display: none;
+            }
+        }
+
+        .alert-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .alert-card:hover {
+            border-color: rgba(60, 131, 246, .4);
+        }
+
+        .alerts-table-wrap {
+            display: none;
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            margin: 0 16px;
+        }
+
+        @media (min-width: 431px) {
+            .alerts-table-wrap {
+                display: block;
+            }
+        }
+
+        .alerts-table-wrap table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .alerts-table-wrap thead tr {
+            background: rgba(31, 41, 55, .7);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .alerts-table-wrap th {
+            padding: 10px 16px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+
+        .tbl-row {
+            transition: background .1s;
+        }
+
+        .tbl-row:hover {
+            background: rgba(255, 255, 255, .03);
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 7px;
+            border-radius: 100px;
+            border: 1px solid transparent;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            letter-spacing: 0.02em;
+        }
+
+        .chip-green {
+            background: rgba(16, 185, 129, .15);
+            border-color: rgba(16, 185, 129, .3);
+            color: #34d399;
+        }
+
+        .chip-yellow {
+            background: rgba(245, 158, 11, .12);
+            border-color: rgba(245, 158, 11, .3);
+            color: #fbbf24;
+        }
+
+        .chip-neutral {
+            background: var(--surface2);
+            border-color: var(--border);
+            color: #94a3b8;
+        }
+
+        .chip-blue {
+            background: rgba(60, 131, 246, .15);
+            border-color: rgba(60, 131, 246, .3);
+            color: var(--primary);
+        }
+
+        .chip-red {
+            background: rgba(239, 68, 68, .12);
+            border-color: rgba(239, 68, 68, .3);
+            color: #f87171;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--muted);
+            font-size: 13px;
+            padding: 40px 16px;
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 12px 16px 6px;
+        }
+
+        /* ── Detail Popup ── */
+        .detail-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: rgba(0, 0, 0, .6);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .detail-backdrop.open {
+            display: flex;
+        }
+
+        .detail-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 520px;
+            max-height: 80dvh;
+            overflow-y: auto;
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 18px 12px;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            background: var(--surface);
+            z-index: 1;
+        }
+
+        .detail-close {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--muted);
+            transition: color .15s;
+        }
+
+        .detail-close:hover {
+            color: #fff;
+        }
+
+        .detail-body {
+            padding: 16px 18px 20px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .detail-stat {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 9px 11px;
+        }
+
+        .detail-stat .ds-label {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .detail-stat .ds-val {
+            font-size: 14px;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+
+        .mobile-only {
+            display: block;
+        }
+
+        @media (min-width: 431px) {
+            .mobile-only {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="header-brand">
+            <svg class="logo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M36.7273 44C33.9891 44 31.6043 39.8386 30.3636 33.69C29.123 39.8386 26.7382 44 24 44
+                 C21.2618 44 18.877 39.8386 17.6364 33.69C16.3957 39.8386 14.0109 44 11.2727 44
+                 C7.25611 44 4 35.0457 4 24C4 12.9543 7.25611 4 11.2727 4C14.0109 4 16.3957 8.16144
+                 17.6364 14.31C18.877 8.16144 21.2618 4 24 4C26.7382 4 29.123 8.16144 30.3636 14.31
+                 C31.6043 8.16144 33.9891 4 36.7273 4C40.7439 4 44 12.9543 44 24C44 35.0457 40.7439 44 36.7273 44Z"
+                    fill="currentColor" />
+            </svg>
+            <span class="brand-name">Alpha Sentinel</span>
+            <div class="header-status" style="margin-left:4px">
+                <span class="status-dot pulse"
+                    style="background:#3c83f6;box-shadow:0 0 0 2px rgba(60,131,246,.25)"></span>
+                <span class="hidden sm:inline" style="color:var(--primary)">Simulation active</span>
+                <span id="health-ts" style="font-size:9px;margin-left:4px"></span>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn-logout-compact logout-btn">
+                <span class="material-symbols-outlined">logout</span>
+                <span class="logout-label">Logout</span>
+            </button>
+        </div>
+    </header>
+
+    <nav class="tab-nav">
+        <a href="/">
+            <span class="material-symbols-outlined">notifications_active</span>Alerts
+        </a>
+        <a href="/monitor.html">
+            <span class="material-symbols-outlined">monitoring</span>Monitor
+        </a>
+        <a href="/market_tide.html">
+            <span class="material-symbols-outlined">waves</span>Market Tide
+        </a>
+        <a href="/simulation.html" class="active">
+            <span class="material-symbols-outlined">play_circle</span>Simulator
+        </a>
+    </nav>
+
+    <div class="page-content">
+        <div class="status-ribbon">
+            <div class="stat-card"><span class="sc-label">Source</span><span class="sc-val"
+                    style="color:var(--primary)">SIM</span></div>
+            <div class="stat-card"><span class="sc-label">Mode</span><span class="sc-val">REPLAY</span></div>
+            <div class="stat-card" id="stat-events"><span class="sc-label">Events/m</span><span class="sc-val">—</span>
+            </div>
+            <div class="stat-card" id="stat-alertsm"><span class="sc-label">Alerts/m</span><span class="sc-val">—</span>
+            </div>
+            <div class="stat-card"><span class="sc-label">Sim Total</span><span class="sc-val" id="alert-count">—</span>
+            </div>
+            <div class="stat-card" id="stat-errors"><span class="sc-label">Errors</span><span class="sc-val">0</span>
+            </div>
+        </div>
+
+        <div class="main-layout">
+            <div class="content-col">
+                <div class="filter-bar">
+                    <div class="filter-toggle-row">
+                        <div class="type-chips" id="type-filter-group">
+                            <button class="type-filter-btn active" data-type="">All</button>
+                            <button class="type-filter-btn" data-type="C">Calls</button>
+                            <button class="type-filter-btn" data-type="P">Puts</button>
+                        </div>
+                        <button class="btn-filter-toggle" id="filter-toggle" aria-expanded="false">
+                            <span class="material-symbols-outlined">tune</span>
+                            <span>Filter</span>
+                        </button>
+                        <!-- Back to controls -->
+                        <a href="/simulation.html" class="ml-auto btn-filter-toggle"
+                            style="background:rgba(60,131,246,.1);border-color:rgba(60,131,246,.3);color:var(--primary)">
+                            <span class="material-symbols-outlined">settings</span>
+                            <span class="hidden sm:inline">Controls</span>
+                        </a>
+                    </div>
+                    <div id="filter-drawer">
+                        <div class="filter-inner">
+                            <div class="filter-search">
+                                <span class="material-symbols-outlined">search</span>
+                                <input id="filter-symbol" type="text" placeholder="Search ticker…" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="alerts-cards">
+                    <p class="empty-state">Loading simulated flow…</p>
+                </div>
+
+                <div class="alerts-table-wrap">
+                    <table id="alerts-table">
+                        <thead>
+                            <tr>
+                                <th>Trade Time</th>
+                                <th>Ticker</th>
+                                <th>Contract</th>
+                                <th class="text-right">Premium</th>
+                                <th class="text-right">Size</th>
+                                <th class="text-right">Vol/OI</th>
+                                <th class="text-right">Spread %</th>
+                                <th class="text-right">OTM %</th>
+                                <th class="text-center" id="th-score">Score <span id="sort-icon-score"></span></th>
+                                <th>Tags</th>
+                                <th class="text-right" style="width:56px">Track</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/50"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <aside class="sidebar">
+                <div class="section-title">Synthetic Events</div>
+                <div id="recent-alerts-list" style="flex:1;overflow-y:auto"></div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Detail Popup -->
+    <div class="detail-backdrop" id="detail-backdrop">
+        <div class="detail-panel">
+            <div class="detail-header">
+                <div class="detail-contract-title" id="detail-title"></div>
+                <button class="detail-close" id="detail-close"><span
+                        class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="detail-body">
+                <div class="detail-grid" id="detail-grid"></div>
+                <div class="detail-tags" id="detail-tags"></div>
+                <button class="detail-cta" id="detail-cta" onclick="detailCtaClick()"></button>
+            </div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <a href="/">
+            <span class="material-symbols-outlined">notifications_active</span>Alerts
+        </a>
+        <a href="/monitor.html">
+            <span class="material-symbols-outlined">monitoring</span>Monitor
+        </a>
+        <a href="/simulation_live.html" class="active">
+            <span class="material-symbols-outlined">play_circle</span>Sim Live
+        </a>
+        <a href="/simulation.html">
+            <span class="material-symbols-outlined">settings</span>Config
+        </a>
+    </nav>
+
+    <script src="/app.js"></script>
+</body>
+
+</html>

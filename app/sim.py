@@ -18,7 +18,7 @@ from app.filters import filter_tick, FILTERS
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [SIM] %(message)s")
 logger = logging.getLogger(__name__)
 
-FILTER_STATS_PATH = os.environ.get("FILTER_STATS_PATH", "/data/filter_stats.json")
+FILTER_STATS_PATH = os.environ.get("FILTER_STATS_PATH_SIM", "/data/filter_stats_sim.json")
 
 
 def _write_filter_stats(stats: dict) -> None:
@@ -30,6 +30,32 @@ def _write_filter_stats(stats: dict) -> None:
         os.replace(tmp, FILTER_STATS_PATH)
     except Exception as e:
         logger.warning(f"filter_stats write failed: {e}")
+
+
+def _write_health(events_per_min: int, alerts_per_min: int) -> None:
+    """Write simulation health snapshot to the DB."""
+    try:
+        with db() as conn:
+            conn.execute(
+                """
+                INSERT INTO health_snapshots
+                (ts, agent_status, ws_status, last_event_ts, last_alert_ts, events_per_min, alerts_per_min, errors_15m, source)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    datetime.now(timezone.utc).isoformat(),
+                    "ok",
+                    "sim",
+                    None,
+                    None,
+                    events_per_min,
+                    alerts_per_min,
+                    0,
+                    "sim"
+                )
+            )
+    except Exception as e:
+        logger.warning(f"Failed to write sim health: {e}")
 
 
 def _row_to_ns(d: dict) -> SimpleNamespace:
@@ -93,7 +119,7 @@ def iter_sim():
 
         # Fetch a chunk of historical alerts for replay
         alerts_chunk = conn.execute(
-            "SELECT * FROM alerts WHERE id >= ? ORDER BY id ASC LIMIT ?",
+            "SELECT * FROM raw_sim_alerts WHERE id >= ? ORDER BY id ASC LIMIT ?",
             (cursor_id, speed)
         ).fetchall()
 
@@ -129,12 +155,14 @@ def iter_sim():
             if fstats["parsed"] > 0 else 0.0
         )
         _write_filter_stats(fstats)
+        _write_health(events_per_min=fstats["parsed"], alerts_per_min=fstats["inserted"])
 
         logger.info(
-            f"[SIM_FILTER] parsed={fstats['parsed']} "
+            f"[FILTER_SIM] parsed={fstats['parsed']} "
             f"s0_drop={fstats['dropped_stage0']} "
             f"s1_drop={fstats['dropped_stage1']} "
             f"s2_drop={fstats['dropped_stage2']} "
+            f"s3_drop={fstats['pre_insert'] - fstats['inserted']} "
             f"inserted={fstats['inserted']}"
         )
         # ────────────────────────────────────────────────────────────────
@@ -153,21 +181,45 @@ def iter_sim():
                     d.get("strike", 0.0), d.get("opt_type", "")
                 )
 
+            # We want to keep the historical trade time `ts` from the CSV as `ts`.
+            # But we update `ingested_at` to `now_ts` so the dashboard knows it just arrived.
+            trade_ts = d.get("ts", now_ts)
+            ingested_at = now_ts
+            trade_time_raw = d.get("trade_time_raw", "")
+            trade_tz = d.get("trade_tz", "UTC")
+
             conn.execute(
                 """
                 INSERT INTO alerts_live
                 (ts, ticker, exp, strike, opt_type, premium, size, volume, oi,
                  bid, ask, spread_pct, spot, otm_pct, dte, score_total,
-                 tags, reason_codes, source, contract_key)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 tags, reason_codes, source, contract_key, ingested_at, trade_time_raw, trade_tz)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    now_ts,
-                    d.get("ticker"), d.get("exp"), d.get("strike"), d.get("opt_type"),
-                    d.get("premium"), d.get("size"), d.get("volume"), d.get("oi"),
-                    d.get("bid"), d.get("ask"), d.get("spread_pct"), d.get("spot"),
-                    d.get("otm_pct"), d.get("dte"), d.get("score_total"),
-                    d.get("tags"), d.get("reason_codes"), "sim", ck
+                    trade_ts,
+                    d.get("ticker"),
+                    d.get("exp"),
+                    d.get("strike"),
+                    d.get("opt_type"),
+                    d.get("premium"),
+                    d.get("size"),
+                    d.get("volume"),
+                    d.get("oi"),
+                    d.get("bid"),
+                    d.get("ask"),
+                    d.get("spread_pct"),
+                    d.get("spot"),
+                    d.get("otm_pct"),
+                    d.get("dte"),
+                    d.get("score_total"),
+                    d.get("tags"),
+                    d.get("reason_codes"),
+                    "sim",
+                    ck,
+                    ingested_at,
+                    trade_time_raw,
+                    trade_tz
                 )
             )
             inserted_count += 1

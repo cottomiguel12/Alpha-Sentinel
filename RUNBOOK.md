@@ -63,3 +63,15 @@ print(f'All {len(items)} monitors OK')
 
 Expected output: one `OK` line per monitored contract with its last 5 score values.
 
+## How to reset sim when replacing CSV
+
+When replacing the CSV snapshot datasets (`/data/etfs.csv` and `/data/stocks.csv`):
+
+1. **Upload the new CSV files** to your server, overwriting the existing ones in the `/data` directory (or updating the files mapped by `OPTIONS_CSVS`). The agent will ignore MacOS `._` hidden files automatically.
+2. **Execute the API Reset** to clear old simulation alerts and cursor states. You can accomplish this directly on the VPS:
+   ```bash
+   curl -X POST http://127.0.0.1:3000/api/sim/reset \
+     -H "Authorization: Bearer <your_jwt_admin_token>"
+   ```
+3. Alternatively, when you open the **Simulator Dashboard**, a dataset version mismatch warning will trigger automatically, pausing the stream and advising you to hit the "Reset Data" button from the UI.
+4. **Restart the Simulation Run** from the dashboard. The agent will begin generating raw flow feed exactly from the top of the new files into `raw_sim_alerts` where the simulator will immediately pick it up.

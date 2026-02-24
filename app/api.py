@@ -182,8 +182,25 @@ async def on_exception(_req: Request, exc: Exception):
 # Basic endpoints
 # ----------------------------
 @APP.get("/health")
-async def health():
-    return {"ok": True, "ts": now_iso()}
+async def health(source: str = "live"):
+    with db() as conn:
+        row = conn.execute(
+            "SELECT * FROM health_snapshots WHERE source=? ORDER BY ts DESC LIMIT 1",
+            (source,)
+        ).fetchone()
+        
+    if not row:
+        return {
+            "ok": True,
+            "ts": now_iso(),
+            "snapshot": None
+        }
+        
+    return {
+        "ok": True,
+        "ts": now_iso(),
+        "snapshot": dict(row)
+    }
 
 
 @APP.post("/auth/login")
@@ -280,12 +297,9 @@ async def alerts(
     include_sim: bool = False,
     user=Depends(require_user)
 ):
-    source_env = os.environ.get("ALERTS_SOURCE", "archive").strip().lower()
-    table_name = "alerts_live" if source_env == "live" else "alerts"
-
     limit = max(1, min(int(limit), 500))
 
-    query = f"SELECT * FROM {table_name}"
+    query = "SELECT * FROM alerts"
     conditions = []
     params = []
 
@@ -338,12 +352,9 @@ async def sim_alerts(
     sort_score: Optional[str] = None,
     user=Depends(require_user)
 ):
-    source_env = os.environ.get("ALERTS_SOURCE", "archive").strip().lower()
-    table_name = "alerts_live" if source_env == "live" else "alerts"
-
     limit = max(1, min(int(limit), 500))
 
-    query = f"SELECT * FROM {table_name}"
+    query = "SELECT * FROM alerts_live"
     conditions = ["LOWER(source) = 'sim'"]
     params = []
 
@@ -384,18 +395,15 @@ async def sim_alerts(
 
 @APP.get("/alerts/recent")
 async def alerts_recent(window_sec: int = 900, limit: int = 15, user=Depends(require_user)):
-    source_env = os.environ.get("ALERTS_SOURCE", "archive").strip().lower()
-    table_name = "alerts_live" if source_env == "live" else "alerts"
-    
     limit = max(1, min(int(limit), 100))
     cutoff_dt = datetime.now(timezone.utc) - timedelta(seconds=window_sec)
     cutoff_iso = cutoff_dt.isoformat()
 
     with db() as conn:
         rows = conn.execute(
-            f"""
+            """
             SELECT *
-            FROM {table_name}
+            FROM alerts
             WHERE ts >= ? AND (source IS NULL OR LOWER(source) != 'sim')
             ORDER BY score_total DESC
             LIMIT ?
@@ -625,18 +633,41 @@ class SimSettingsIn(BaseModel):
     cursor_id: Optional[int] = None
 
 
+def _get_dataset_version() -> str:
+    paths = [p.strip() for p in os.environ.get("OPTIONS_CSVS", "/data/etfs.csv,/data/stocks.csv").split(",")]
+    mtimes = []
+    for p in paths:
+        if os.path.exists(p) and not os.path.basename(p).startswith("._"):
+            mtimes.append(str(int(os.path.getmtime(p))))
+    if not mtimes:
+        return ""
+    return hashlib.md5(",".join(mtimes).encode()).hexdigest()
+
 @APP.get("/sim/status")
 async def get_sim_status(user=Depends(require_user)):
     with db() as conn:
         state = conn.execute("SELECT * FROM sim_state WHERE id=1").fetchone()
         if not state:
             return {"ok": False, "error": "sim_state not initialized"}
+        
+        current_version = _get_dataset_version()
+        stored_version = state["dataset_hash"]
+        needs_reset = False
+        
+        if current_version and stored_version and stored_version != current_version:
+            needs_reset = True
+        elif current_version and not stored_version:
+            # First time calculation, just store it
+            conn.execute("UPDATE sim_state SET dataset_hash=? WHERE id=1", (current_version,))
+            stored_version = current_version
             
         count_row = conn.execute("SELECT COUNT(*) as c FROM alerts_live").fetchone()
         return {
             "ok": True, 
             "state": dict(state),
-            "alerts_live_count": count_row["c"]
+            "alerts_live_count": count_row["c"],
+            "dataset_version": current_version,
+            "needs_reset": needs_reset
         }
 
 
@@ -689,15 +720,39 @@ async def stop_sim(user=Depends(require_role("sentinel"))):
 async def reset_sim(user=Depends(require_role("sentinel"))):
     with db() as conn:
         conn.execute("DELETE FROM alerts_live")
-        conn.execute("UPDATE sim_state SET cursor_id=1, last_tick_ts=NULL WHERE id=1")
+        conn.execute("UPDATE sim_state SET cursor_id=1, last_tick_ts=NULL, dataset_hash=NULL WHERE id=1")
     return {"ok": True, "message": "Simulation data cleared and cursor reset"}
 
 
 @APP.get("/sim/filter_stats")
-async def get_filter_stats(user=Depends(require_user)):
-    """Return the last per-tick filter counters written by the agent."""
+async def get_sim_filter_stats(user=Depends(require_user)):
+    """Return the last per-tick filter counters written by the simulation worker."""
     import json as _json
-    path = os.environ.get("FILTER_STATS_PATH", "/data/filter_stats.json")
+    path = os.environ.get("FILTER_STATS_PATH_SIM", "/data/filter_stats_sim.json")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = _json.load(f)
+        data["available"] = True
+        return data
+    except FileNotFoundError:
+        return {
+            "available": False,
+            "parsed": 0,
+            "dropped_stage0": 0,
+            "dropped_stage1": 0,
+            "dropped_stage2": 0,
+            "pre_insert": 0,
+            "inserted": 0,
+            "efficiency_pct": 0.0,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@APP.get("/alerts/filter_stats")
+async def get_live_filter_stats(user=Depends(require_user)):
+    """Return the last per-tick filter counters written by the ingestion agent."""
+    import json as _json
+    path = os.environ.get("FILTER_STATS_PATH_LIVE", "/data/filter_stats_live.json")
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = _json.load(f)

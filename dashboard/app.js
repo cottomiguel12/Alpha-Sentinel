@@ -399,7 +399,17 @@ async function loadAlerts(isBackground = false) {
     if (currentTypeFilter) params.append('type', currentTypeFilter);
     if (currentSortScore) params.append('sort_score', currentSortScore);
 
-    const endpoint = location.pathname.includes('simulation_live.html') ? '/sim/alerts' : '/alerts';
+    const isLive = location.pathname.includes('index.html') || location.pathname === '/' || location.pathname === '';
+    const endpoint = location.pathname.includes('simulation') ? '/sim/alerts' : '/alerts';
+
+    if (isLive) {
+        const uw = await fetchApi('/uw/status');
+        if (uw && !uw.enabled) {
+            if (cardsWrap) cardsWrap.innerHTML = '<div style="margin:20px;text-align:center;padding:24px;border:1px dashed #3c83f6;border-radius:12px;"><h3 style="color:#3c83f6;margin-bottom:8px;font-weight:600">UW Alerts — Coming Soon</h3><p style="color:#64748b;font-size:14px">API key not configured</p></div>';
+            if (tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center py-12"><div style="display:inline-block;padding:24px 48px;border:1px dashed #3c83f6;border-radius:12px;text-align:center"><h3 style="color:#3c83f6;font-size:16px;margin-bottom:8px;font-weight:600">UW Alerts — Coming Soon</h3><p style="color:#64748b;font-size:14px">API key not configured</p></div></td></tr>`;
+            return; // Skip loading actual alerts, effectively hiding any archive rows
+        }
+    }
     const data = await fetchApi(`${endpoint}?${params}`);
     if (!data?.items) {
         if (cardsWrap) cardsWrap.innerHTML = errorHtml;

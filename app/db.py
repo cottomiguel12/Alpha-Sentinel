@@ -73,6 +73,36 @@ def init_db():
 
         # --- Simulation Tables ---
         conn.execute("""
+        CREATE TABLE IF NOT EXISTS raw_sim_alerts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          ts TEXT NOT NULL,
+          ticker TEXT NOT NULL,
+          exp TEXT NOT NULL,
+          strike REAL NOT NULL,
+          opt_type TEXT NOT NULL,
+          premium REAL,
+          size INTEGER,
+          volume INTEGER,
+          oi INTEGER,
+          bid REAL,
+          ask REAL,
+          spread_pct REAL,
+          spot REAL,
+          otm_pct REAL,
+          dte INTEGER,
+          score_total REAL NOT NULL,
+          tags TEXT,
+          reason_codes TEXT,
+          source TEXT,
+          contract_key TEXT,
+          ingested_at TEXT,
+          trade_time_raw TEXT,
+          trade_tz TEXT,
+          UNIQUE(contract_key, trade_time_raw, premium, size) ON CONFLICT IGNORE
+        )
+        """)
+
+        conn.execute("""
         CREATE TABLE IF NOT EXISTS alerts_live (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           ts TEXT NOT NULL,
@@ -130,7 +160,8 @@ def init_db():
           last_alert_ts TEXT,
           events_per_min INTEGER NOT NULL,
           alerts_per_min INTEGER NOT NULL,
-          errors_15m INTEGER NOT NULL
+          errors_15m INTEGER NOT NULL,
+          source TEXT DEFAULT 'live'
         )
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_health_ts ON health_snapshots(ts)")
@@ -206,6 +237,18 @@ def init_db():
           created_at TEXT
         )
         """)
+        
+        # Add non-destructive column migrations for market_tide_ticks
+        existing_tide_cols = {r["name"] for r in conn.execute("PRAGMA table_info(market_tide_ticks)").fetchall()}
+        for col, col_def in [
+            ("interval", "TEXT NOT NULL DEFAULT '1m'"),
+            ("date", "TEXT NOT NULL DEFAULT ''"),
+            ("raw", "TEXT"),
+            ("created_at", "TEXT")
+        ]:
+            if col not in existing_tide_cols:
+                conn.execute(f"ALTER TABLE market_tide_ticks ADD COLUMN {col} {col_def}")
+
         conn.execute("CREATE INDEX IF NOT EXISTS idx_market_tide_ticks_int_ts ON market_tide_ticks(interval, ts)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_market_tide_ticks_date_int ON market_tide_ticks(date, interval)")
 
@@ -231,17 +274,14 @@ def init_db():
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_market_regime_snapshots_ts ON market_regime_snapshots(ts)")
 
-        # Add non-destructive column migrations for market_tide_ticks
-        existing_tide_cols = {r["name"] for r in conn.execute("PRAGMA table_info(market_tide_ticks)").fetchall()}
-        for col, col_def in [("date", "TEXT"), ("raw", "TEXT"), ("created_at", "TEXT")]:
-            if col not in existing_tide_cols:
-                conn.execute(f"ALTER TABLE market_tide_ticks ADD COLUMN {col} {col_def}")
-
-        # Add source column if it doesn't exist yet (safe for existing DBs)
-        for table in ["alerts", "alerts_live"]:
+        for table in ["alerts", "alerts_live", "health_snapshots"]:
             existing_cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
             if "source" not in existing_cols:
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN source TEXT")
+
+        existing_sim_cols = {r["name"] for r in conn.execute("PRAGMA table_info(sim_state)").fetchall()}
+        if "dataset_hash" not in existing_sim_cols:
+            conn.execute("ALTER TABLE sim_state ADD COLUMN dataset_hash TEXT")
 
         # Add non-destructive column migrations for timestamps
         for table in ["alerts", "alerts_live"]:

@@ -59,9 +59,8 @@ class MockProvider(BaseProvider):
         self._agent = agent
 
     def fetch(self) -> "List[AlertRow]":
-        from app.agent import _mock_alert
-        n = min(3, self._agent.max_alerts_per_tick)
-        return [_mock_alert() for _ in range(n)]
+        # Mock alerts disabled per user request to only use included CSV
+        return []
 
 
 # ---------------------------------------------------------------------------

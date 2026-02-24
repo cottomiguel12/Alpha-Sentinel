@@ -35,6 +35,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 from pathlib import Path
+import sqlite3
 from app.db import db, init_db
 from app.filters import filter_tick, FILTERS
 
@@ -263,6 +264,9 @@ class AlertRow:
     tags: str
     reason_codes: str
     contract_key: str
+    ingested_at: str
+    trade_time_raw: str
+    trade_tz: str
     source: str = "CSV"  # CSV_ETF | CSV_STOCK | CSV | MOCK
 
 
@@ -354,9 +358,48 @@ def _row_from_csv(rec: Dict[str, Any], source: str = "CSV") -> Optional[AlertRow
         code=code_str,
     )
 
+    # Extract Trade Time
+    time_raw = str(_pick(rec, ["time", "Time"], "")).strip()
+    if not time_raw:
+        print(f"DEBUG: time_raw is empty. rec keys: {list(rec.keys())}")
+        
+    date_raw = str(_pick(rec, ["date", "Date"], "")).strip()
+    
+    # Simple ET parsing. CSV times are usually Eastern Time (NY).
+    # NY is UTC-5 (or UTC-4 in daylight). We'll assume a fixed offset of 5 hours for simplicity
+    trade_dt_utc = now_iso()
+    if time_raw:
+        try:
+            # Strip trailing timezone info from string like "09:56:50 ET"
+            clean_time_raw = time_raw.replace(" ET", "").replace(" EST", "").replace(" EDT", "").strip()
+
+            # Fallback to today if date missing
+            if not date_raw:
+                date_raw = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            
+            # Extract just the date part
+            date_part = date_raw.split("T")[0]
+            
+            # Ensure time has seconds
+            if len(clean_time_raw.split(":")) == 2:
+                clean_time_raw += ":00"
+
+            # Parse naive datetime: "2024-05-10 09:35:00"
+            dt_str = f"{date_part} {clean_time_raw}"
+            parsed_dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
+            
+            # Eastern Time is UTC-5; to convert TO UTC, we add 5 hours.
+            parsed_dt = parsed_dt + timedelta(hours=5)
+            
+            # Attach UTC timezone and format to ISO
+            trade_dt_utc = parsed_dt.replace(tzinfo=timezone.utc).isoformat()
+        except Exception as err:
+            print(f"Time parse error on {time_raw} / {date_raw}: {err}")
+            trade_dt_utc = now_iso()
+
     ck = _normalize_contract_key(_contract_key(ticker, exp, strike, opt_type))
     return AlertRow(
-        ts=now_iso(),
+        ts=trade_dt_utc,
         ticker=ticker,
         exp=exp,
         strike=float(strike),
@@ -375,6 +418,9 @@ def _row_from_csv(rec: Dict[str, Any], source: str = "CSV") -> Optional[AlertRow
         tags=f"{source}_{code_str}" if code_str else source,
         reason_codes=json.dumps(["CSV_IMPORT", code_str]) if code_str else json.dumps(["CSV_IMPORT"]),
         contract_key=ck,
+        ingested_at=now_iso(),
+        trade_time_raw=time_raw,
+        trade_tz="America/New_York",
         source=source,
     )
 
@@ -423,6 +469,9 @@ def _mock_alert() -> AlertRow:
         tags="MOCK",
         reason_codes=json.dumps(["MOCK_DATA"]),
         contract_key=ck,
+        ingested_at=now_iso(),
+        trade_time_raw=now_iso().split("T")[1][:8],
+        trade_tz="UTC",
     )
 
 
@@ -448,10 +497,10 @@ class SentinelAgent:
         # Multi-file: OPTIONS_CSVS takes priority; fall back to OPTIONS_CSV for backward compat
         csvs_raw = str(_cfg("options_csvs", "OPTIONS_CSVS", "")).strip()
         if csvs_raw:
-            self.csv_paths = [p.strip() for p in csvs_raw.split(",") if p.strip()]
+            self.csv_paths = [p.strip() for p in csvs_raw.split(",") if p.strip() and not os.path.basename(p.strip()).startswith("._")]
         else:
             single = str(_cfg("options_csv", "OPTIONS_CSV", "")).strip()
-            self.csv_paths = [single] if single else []
+            self.csv_paths = [single] if single and not os.path.basename(single).startswith("._") else []
 
         # Keep backward-compat attribute for providers / old code that checks self.csv_path
         self.csv_path = self.csv_paths[0] if self.csv_paths else None
@@ -601,14 +650,30 @@ class SentinelAgent:
             has_ck = _alerts_has_contract_key(conn)
             col_names = {r["name"] for r in conn.execute("PRAGMA table_info(alerts)").fetchall()}
             has_source = "source" in col_names
+            has_ingest = "ingested_at" in col_names
 
             for a in alerts:
                 try:
+                    target_table = "raw_sim_alerts" if str(a.source).lower() == "archive" else "alerts"
                     ck = _normalize_contract_key(a.contract_key)
-                    if has_ck and has_source:
+                    if has_ck and has_source and has_ingest:
                         conn.execute(
-                            """
-                            INSERT INTO alerts
+                            f"""
+                            INSERT INTO {target_table}
+                            (ts,contract_key,ticker,exp,strike,opt_type,premium,size,volume,oi,bid,ask,spread_pct,spot,otm_pct,dte,score_total,tags,reason_codes,source,ingested_at,trade_time_raw,trade_tz)
+                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                            """,
+                            (
+                                a.ts, ck, a.ticker, a.exp, a.strike, a.opt_type,
+                                a.premium, a.size, a.volume, a.oi, a.bid, a.ask, a.spread_pct,
+                                a.spot, a.otm_pct, a.dte, a.score_total, a.tags, a.reason_codes,
+                                a.source, a.ingested_at, a.trade_time_raw, a.trade_tz
+                            ),
+                        )
+                    elif has_ck and has_source:
+                        conn.execute(
+                            f"""
+                            INSERT INTO {target_table}
                             (ts,contract_key,ticker,exp,strike,opt_type,premium,size,volume,oi,bid,ask,spread_pct,spot,otm_pct,dte,score_total,tags,reason_codes,source)
                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                             """,
@@ -621,8 +686,8 @@ class SentinelAgent:
                         )
                     elif has_ck:
                         conn.execute(
-                            """
-                            INSERT INTO alerts
+                            f"""
+                            INSERT INTO {target_table}
                             (ts,contract_key,ticker,exp,strike,opt_type,premium,size,volume,oi,bid,ask,spread_pct,spot,otm_pct,dte,score_total,tags,reason_codes)
                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                             """,
@@ -634,8 +699,8 @@ class SentinelAgent:
                         )
                     else:
                         conn.execute(
-                            """
-                            INSERT INTO alerts
+                            f"""
+                            INSERT INTO {target_table}
                             (ts,ticker,exp,strike,opt_type,premium,size,volume,oi,bid,ask,spread_pct,spot,otm_pct,dte,score_total,tags,reason_codes)
                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                             """,
@@ -646,8 +711,8 @@ class SentinelAgent:
                             ),
                         )
                     inserted += 1
-                except Exception as e:
-                    self._log(f"insert alert failed: {e}")
+                except sqlite3.Error as e:
+                    self._log(f"Insert error: {e}")
 
         return inserted
 
@@ -772,8 +837,8 @@ class SentinelAgent:
             conn.execute(
                 """
                 INSERT INTO health_snapshots
-                (ts,agent_status,ws_status,last_event_ts,last_alert_ts,events_per_min,alerts_per_min,errors_15m)
-                VALUES (?,?,?,?,?,?,?,?)
+                (ts,agent_status,ws_status,last_event_ts,last_alert_ts,events_per_min,alerts_per_min,errors_15m,source)
+                VALUES (?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     now_iso(),
@@ -784,13 +849,14 @@ class SentinelAgent:
                     int(events_per_min),
                     int(alerts_per_min),
                     int(errors_15m),
+                    "live"
                 ),
             )
 
     def _write_filter_stats(self, stats: dict) -> None:
-        """Persist per-tick filter counters to /data/filter_stats.json for the API."""
+        """Persist per-tick filter counters to /data/filter_stats_live.json for the API."""
         import json as _json
-        path = os.environ.get("FILTER_STATS_PATH", "/data/filter_stats.json")
+        path = os.environ.get("FILTER_STATS_PATH_LIVE", "/data/filter_stats_live.json")
         try:
             tmp = path + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:
@@ -819,10 +885,11 @@ class SentinelAgent:
         fstats["efficiency_pct"] = efficiency
 
         self._log(
-            f"[SIM_FILTER] parsed={fstats['parsed']} "
+            f"[FILTER] parsed={fstats['parsed']} "
             f"stage0_drop={fstats['dropped_stage0']} "
             f"stage1_drop={fstats['dropped_stage1']} "
             f"stage2_drop={fstats['dropped_stage2']} "
+            f"stage3_drop={fstats['pre_insert'] - fstats['inserted']} "
             f"inserted={fstats['inserted']}"
         )
         self._write_filter_stats(fstats)
@@ -838,7 +905,7 @@ class SentinelAgent:
             agent_status="ok",
             last_event_ts=last_alert_ts,
             last_alert_ts=last_alert_ts,
-            events_per_min=int(inserted),
+            events_per_min=int(fstats["parsed"]),
             alerts_per_min=int(inserted),
             errors_15m=0,
         )
