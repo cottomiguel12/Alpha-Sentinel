@@ -508,8 +508,12 @@ class SentinelAgent:
         self.interval = float(_cfg("interval_sec", "AGENT_INTERVAL_SEC", "2.5"))
         self.max_alerts_per_tick = int(_cfg("max_alerts_per_tick", "MAX_ALERTS_PER_TICK", "25"))
 
-        replay_v = str(_cfg("replay_from_start", "REPLAY_FROM_START", "0")).strip().lower()
-        replay_from_start = replay_v in ("1", "true", "yes", "y", "on")
+        raw_replay = _cfg("replay_from_start", "REPLAY_FROM_START", "0")
+        if isinstance(raw_replay, bool):
+            replay_from_start = raw_replay
+        else:
+            replay_v = str(raw_replay).strip().lower()
+            replay_from_start = replay_v in ("1", "true", "yes", "y", "on")
 
         # Optional: log loaded config once (helpful to confirm it works)
         try:
