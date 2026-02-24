@@ -834,6 +834,29 @@
                         <tbody class="divide-y divide-slate-800/50"></tbody>
                     </table>
                 </div>
+
+                <!-- Pagination footer -->
+                <div id="sim-pagination" class="mt-4 px-4 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <button id="btn-prev-page" class="btn-filter-toggle !px-2" onclick="changePage(-1)" disabled>
+                            <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                        </button>
+                        <span id="ui-page-info" class="text-[11px] font-bold text-muted uppercase tracking-wider">Page
+                            1</span>
+                        <button id="btn-next-page" class="btn-filter-toggle !px-2" onclick="changePage(1)" disabled>
+                            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="btn-back-live"
+                            class="btn-filter-toggle !px-4 !bg-primary/10 !text-primary !border-primary/20 hidden"
+                            onclick="resetToLive()">
+                            <span class="material-symbols-outlined text-[16px]">sensors</span> Back to Live
+                        </button>
+                        <span id="ui-total-alerts" class="text-[11px] text-muted font-bold uppercase tracking-wider">0
+                            alerts</span>
+                    </div>
+                </div>
             </div>
 
             <aside class="sidebar">

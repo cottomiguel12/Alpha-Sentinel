@@ -4,6 +4,10 @@ const API_BASE = '/api';
 
 let currentTypeFilter = '';
 let currentSortScore = '';
+let currentPage = 1;
+let itemsPerPage = 50;
+let totalAlerts = 0;
+let isHistoricalView = false;
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 function getToken() {
@@ -415,21 +419,25 @@ async function loadAlerts(isBackground = false) {
         if (tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center py-8 text-slate-400">Loading alerts…</td></tr>`;
     }
 
-    const params = new URLSearchParams({ limit: 50 });
+    const params = new URLSearchParams({
+        limit: itemsPerPage,
+        offset: (currentPage - 1) * itemsPerPage
+    });
     const sym = document.getElementById('filter-symbol')?.value;
     if (sym) params.append('symbol', sym);
     if (currentTypeFilter) params.append('type', currentTypeFilter);
     if (currentSortScore) params.append('sort_score', currentSortScore);
 
     const isLive = location.pathname.includes('index.html') || location.pathname === '/' || location.pathname === '';
-    const endpoint = location.pathname.includes('simulation') ? '/sim/alerts' : '/alerts';
+    const isSim = location.pathname.includes('simulation');
+    const endpoint = isSim ? '/sim/alerts' : '/alerts';
 
-    if (isLive) {
+    if (isLive && !isSim) {
         const uw = await fetchApi('/uw/status');
         if (uw && !uw.enabled) {
             if (cardsWrap) cardsWrap.innerHTML = '<div style="margin:20px;text-align:center;padding:24px;border:1px dashed #3c83f6;border-radius:12px;"><h3 style="color:#3c83f6;margin-bottom:8px;font-weight:600">UW Alerts — Coming Soon</h3><p style="color:#64748b;font-size:14px">API key not configured</p></div>';
             if (tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center py-12"><div style="display:inline-block;padding:24px 48px;border:1px dashed #3c83f6;border-radius:12px;text-align:center"><h3 style="color:#3c83f6;font-size:16px;margin-bottom:8px;font-weight:600">UW Alerts — Coming Soon</h3><p style="color:#64748b;font-size:14px">API key not configured</p></div></td></tr>`;
-            return; // Skip loading actual alerts, effectively hiding any archive rows
+            return;
         }
     }
     const data = await fetchApi(`${endpoint}?${params}`);
@@ -438,6 +446,9 @@ async function loadAlerts(isBackground = false) {
         if (tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center py-8 text-rose-400">Error loading alerts</td></tr>`;
         return;
     }
+
+    totalAlerts = data.total || 0;
+    updatePaginationUI();
 
     // Cards (mobile)
     if (cardsWrap) {
@@ -823,7 +834,10 @@ document.addEventListener('DOMContentLoaded', () => {
         let debounce;
         filterInput.addEventListener('input', () => {
             clearTimeout(debounce);
-            debounce = setTimeout(() => loadAlerts(false), 400);
+            debounce = setTimeout(() => {
+                currentPage = 1; // Reset to page 1 on search
+                loadAlerts(false);
+            }, 400);
         });
     }
 
@@ -837,7 +851,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             btn.classList.add('active');
             btn.setAttribute('aria-pressed', 'true');
-            currentTypeFilter = btn.dataset.type;
+            currentTypeFilter = btn.dataset.type || '';
+            currentPage = 1; // Reset to page 1 on filter change
             loadAlerts(false);
         });
     });
@@ -893,12 +908,60 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auto-refresh every 5s
     setInterval(() => {
         updateHealth();
-        loadAlerts(true);
+
+        // Only refresh alerts automatically if on page 1
+        if (!isHistoricalView && currentPage === 1) {
+            loadAlerts(true);
+        }
+
         loadMonitors(true);
         loadTopRecent(true);
         loadMarketTide(true);
     }, 5000);
 });
+
+// ── Pagination Logic ──────────────────────────────────────────────────────────
+function updatePaginationUI() {
+    const prevBtn = document.getElementById('btn-prev-page');
+    const nextBtn = document.getElementById('btn-next-page');
+    const pageInfo = document.getElementById('ui-page-info');
+    const totalEl = document.getElementById('ui-total-alerts');
+    const liveBtn = document.getElementById('btn-back-live');
+
+    if (prevBtn) prevBtn.disabled = currentPage <= 1;
+    if (nextBtn) nextBtn.disabled = (currentPage * itemsPerPage) >= totalAlerts;
+    if (pageInfo) pageInfo.textContent = `Page ${currentPage}`;
+    if (totalEl) totalEl.textContent = `${totalAlerts.toLocaleString()} contracts`;
+
+    if (liveBtn) {
+        if (currentPage > 1) liveBtn.classList.remove('hidden');
+        else liveBtn.classList.add('hidden');
+    }
+}
+
+async function changePage(delta) {
+    const next = currentPage + delta;
+    if (next < 1) return;
+    if ((next - 1) * itemsPerPage >= totalAlerts && delta > 0) return;
+
+    currentPage = next;
+    isHistoricalView = (currentPage > 1);
+
+    // Smooth scroll to top
+    const tableWrap = document.querySelector('.alerts-table-wrap');
+    if (tableWrap) tableWrap.scrollTop = 0;
+    else window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    await loadAlerts();
+}
+
+function resetToLive() {
+    currentPage = 1;
+    isHistoricalView = false;
+    const liveBtn = document.getElementById('btn-back-live');
+    if (liveBtn) liveBtn.classList.add('hidden');
+    loadAlerts();
+}
 
 function showLoginError(msg) {
     let el = document.getElementById('login-error');

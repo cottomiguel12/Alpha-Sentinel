@@ -664,8 +664,31 @@
                 </div>
             </div>
 
-            <div id="sim-alerts-container" class="space-y-1.5 max-h-[400px] overflow-y-auto pr-2 custom-scroll">
+            <div id="sim-alerts-container" class="space-y-1.5 max-h-[600px] overflow-y-auto pr-2 custom-scroll">
                 <p class="empty-state text-[11px]">Waiting for sim activity...</p>
+            </div>
+
+            <!-- Pagination Controls -->
+            <div id="sim-pagination" class="mt-4 flex items-center justify-between border-t border-border pt-4">
+                <div class="flex items-center gap-2">
+                    <button id="btn-prev-page" class="btn-action btn-secondary !p-1.5" onclick="changeSimPage(-1)"
+                        disabled>
+                        <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                    </button>
+                    <span id="ui-page-info" class="text-[11px] font-bold text-muted uppercase tracking-wider">Page
+                        1</span>
+                    <button id="btn-next-page" class="btn-action btn-secondary !p-1.5" onclick="changeSimPage(1)"
+                        disabled>
+                        <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                    </button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="btn-back-live" class="btn-action btn-primary !text-[10px] !px-3 !py-1.5 hidden"
+                        onclick="resetToLive()">
+                        <span class="material-symbols-outlined text-[14px]">sensors</span> Back to Live
+                    </button>
+                    <span id="ui-total-contracts" class="text-[10px] text-muted">0 contracts</span>
+                </div>
             </div>
         </div>
 
@@ -693,6 +716,10 @@
     <script>
         // Local state
         let simStateCache = null;
+        let simCurrentPage = 1;
+        let simItemsPerPage = 25;
+        let simTotalAlerts = 0;
+        let simIsViewingHistorical = false;
 
         // Custom Simulator specific API polling
         async function fetchSimState() {
@@ -896,36 +923,84 @@
         let simPeak = 0;
 
         async function fetchSimAlerts() {
-            const data = await fetchApi('/sim/alerts?limit=25');
+            // If historical view is active, don't auto-poll fresh data
+            if (simIsViewingHistorical) return;
+
+            const offset = (simCurrentPage - 1) * simItemsPerPage;
+            const data = await fetchApi(`/sim/alerts?limit=${simItemsPerPage}&offset=${offset}`);
             const container = document.getElementById('sim-alerts-container');
 
-            // Track activity for chart
-            const batchSize = data?.items?.length || 0;
-            const latestTs = data?.items?.[0]?.ts || null;
-            simActivityHistory.push({ val: batchSize, ts: latestTs });
+            if (data && data.ok) {
+                simTotalAlerts = data.total;
+                document.getElementById('ui-total-contracts').textContent = `${simTotalAlerts.toLocaleString()} contracts`;
 
-            if (simActivityHistory.length > 50) simActivityHistory.shift();
-            if (batchSize > simPeak) simPeak = batchSize;
-            updateSimChart();
+                // Update pagination buttons
+                document.getElementById('btn-prev-page').disabled = simCurrentPage <= 1;
+                document.getElementById('btn-next-page').disabled = (simCurrentPage * simItemsPerPage) >= simTotalAlerts;
+                document.getElementById('ui-page-info').textContent = `Page ${simCurrentPage}`;
 
-            if (data && data.items && data.items.length) {
-                container.innerHTML = '';
-                data.items.forEach(alert => {
-                    const row = document.createElement('div');
-                    row.className = 'text-[11px] p-2 bg-[var(--surface2)] rounded flex justify-between items-center border border-[var(--border)] border-l-[3px] shadow-sm transition-all hover:opacity-80';
-                    row.style.borderLeftColor = alert.opt_type === 'C' ? '#34d399' : '#f87171';
-                    row.innerHTML = `
-                        <span class="text-slate-400 font-mono w-32 shrink-0">${formatDate(alert.ts)}</span>
-                        <span class="text-white font-bold w-12 shrink-0 truncate">${alert.ticker}</span>
-                        <span class="text-muted w-14 shrink-0 truncate">$${alert.strike}${alert.opt_type}</span>
-                        <span class="font-bold w-14 text-right shrink-0">$${(alert.premium / 1000).toFixed(1)}k</span>
-                        <span class="text-white font-bold w-12 text-center ml-2 shrink-0 chip ${scoreColor(alert.score_total)}">${alert.score_total.toFixed(1)}</span>
-                    `;
-                    container.appendChild(row);
-                });
-            } else {
-                container.innerHTML = '<p class="empty-state text-[11px]">Waiting for sim activity...</p>';
+                // Track activity for chart (only on page 1)
+                if (simCurrentPage === 1) {
+                    const batchSize = data?.items?.length || 0;
+                    const latestTs = data?.items?.[0]?.ts || null;
+                    simActivityHistory.push({ val: batchSize, ts: latestTs });
+                    if (simActivityHistory.length > 50) simActivityHistory.shift();
+                    if (batchSize > simPeak) simPeak = batchSize;
+                    updateSimChart();
+                }
+
+                if (data.items && data.items.length) {
+                    container.innerHTML = '';
+                    data.items.forEach(alert => {
+                        const row = document.createElement('div');
+                        row.className = 'text-[11px] p-2 bg-[var(--surface2)] rounded flex justify-between items-center border border-[var(--border)] border-l-[3px] shadow-sm transition-all hover:opacity-80';
+                        row.style.borderLeftColor = alert.opt_type === 'C' ? '#34d399' : '#f87171';
+                        row.innerHTML = `
+                            <span class="text-slate-400 font-mono w-32 shrink-0">${formatDate(alert.ts)}</span>
+                            <span class="text-white font-bold w-12 shrink-0 truncate">${alert.ticker}</span>
+                            <span class="text-muted w-14 shrink-0 truncate">$${alert.strike}${alert.opt_type}</span>
+                            <span class="font-bold w-14 text-right shrink-0">$${(alert.premium / 1000).toFixed(1)}k</span>
+                            <span class="text-white font-bold w-12 text-center ml-2 shrink-0 chip ${scoreColor(alert.score_total)}">${alert.score_total.toFixed(1)}</span>
+                        `;
+                        container.appendChild(row);
+                    });
+                } else if (simCurrentPage === 1) {
+                    container.innerHTML = '<p class="empty-state text-[11px]">Waiting for sim activity...</p>';
+                }
             }
+        }
+
+        async function changeSimPage(delta) {
+            const next = simCurrentPage + delta;
+            if (next < 1) return;
+            if ((next - 1) * simItemsPerPage >= simTotalAlerts && delta > 0) return;
+
+            simCurrentPage = next;
+            simIsViewingHistorical = (simCurrentPage > 1);
+
+            const liveBtn = document.getElementById('btn-back-live');
+            if (simIsViewingHistorical) {
+                liveBtn.classList.remove('hidden');
+            } else {
+                liveBtn.classList.add('hidden');
+            }
+
+            // Immediately fetch the requested page
+            const container = document.getElementById('sim-alerts-container');
+            container.innerHTML = `<p class="empty-state text-[11px]">Loading contracts page ${simCurrentPage}...</p>`;
+
+            // Temporary bypass lock to fetch this page once
+            const wasViewing = simIsViewingHistorical;
+            simIsViewingHistorical = false;
+            await fetchSimAlerts();
+            simIsViewingHistorical = wasViewing;
+        }
+
+        function resetToLive() {
+            simCurrentPage = 1;
+            simIsViewingHistorical = false;
+            document.getElementById('btn-back-live').classList.add('hidden');
+            fetchSimAlerts();
         }
 
         function updateSimChart() {

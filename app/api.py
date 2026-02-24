@@ -348,6 +348,7 @@ async def alerts(
 @APP.get("/sim/alerts")
 async def sim_alerts(
     limit: int = 50,
+    offset: int = 0,
     symbol: Optional[str] = None,
     type: Optional[str] = None,
     min_premium: Optional[float] = None,
@@ -357,8 +358,9 @@ async def sim_alerts(
     user=Depends(require_user)
 ):
     limit = max(1, min(int(limit), 500))
+    offset = max(0, int(offset))
 
-    query = "SELECT * FROM alerts_live"
+    base_query = "FROM alerts_live"
     conditions = ["LOWER(source) = 'sim'"]
     params = []
 
@@ -380,23 +382,32 @@ async def sim_alerts(
         conditions.append("dte <= ?")
         params.append(dte_max)
 
+    where_clause = ""
     if conditions:
-        query += " WHERE " + " AND ".join(conditions)
+        where_clause = " WHERE " + " AND ".join(conditions)
+
+    # Count total
+    count_query = "SELECT COUNT(*) " + base_query + where_clause
+    
+    # Selection query
+    select_query = "SELECT * " + base_query + where_clause
 
     if sort_score and sort_score.lower() == "desc":
-        query += " ORDER BY score_total DESC LIMIT ?"
+        select_query += " ORDER BY score_total DESC"
     elif sort_score and sort_score.lower() == "asc":
-        query += " ORDER BY score_total ASC LIMIT ?"
+        select_query += " ORDER BY score_total ASC"
     else:
-        query += " ORDER BY id DESC LIMIT ?"
-    params.append(limit)
+        select_query += " ORDER BY id DESC"
+    
+    select_query += " LIMIT ? OFFSET ?"
+    select_params = params + [limit, offset]
 
     with db() as conn:
-        rows = conn.execute(query, tuple(params)).fetchall()
+        total = conn.execute(count_query, tuple(params)).fetchone()[0]
+        rows = conn.execute(select_query, tuple(select_params)).fetchall()
         items = _format_alerts(rows, conn)
 
-
-    return {"ok": True, "items": items}
+    return {"ok": True, "items": items, "total": total, "limit": limit, "offset": offset}
 
 @APP.get("/alerts/recent")
 async def alerts_recent(window_sec: int = 900, limit: int = 15, user=Depends(require_user)):
