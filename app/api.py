@@ -286,76 +286,7 @@ def _format_alerts(rows, conn):
     return items
 
 
-def _group_alerts(items: List[dict]) -> List[dict]:
-    """
-    Groups alerts by trade_id.
-    If multiple alerts share the same trade_id, they are consolidated into a
-    'position' object with a 'legs' array.
-    """
-    if not items:
-        return []
 
-    grouped = {}
-    order = []
-
-    for item in items:
-        tid = item.get("trade_id")
-        # Items without a trade_id (or same tid but different ticker) shouldn't happen
-        # given our generation logic, but we handle it just in case.
-        key = f"{tid}_{item.get('ticker')}" if tid else None
-
-        if not key:
-            order.append(item)
-            continue
-
-        if key not in grouped:
-            # First leg of this identifier
-            grouped[key] = {
-                "type": "position",
-                "trade_id": tid,
-                "ticker": item.get("ticker"),
-                "ts": item.get("ts"),
-                "ingested_at": item.get("ingested_at"),
-                "trade_time_raw": item.get("trade_time_raw"),
-                "trade_tz": item.get("trade_tz"),
-                "spot": item.get("spot"),
-                "score_total": item.get("score_total"),
-                "total_premium": 0.0,
-                "legs": []
-            }
-            order.append(grouped[key])
-
-        # Add leg to position
-        pos = grouped[key]
-        pos["legs"].append(item)
-        pos["total_premium"] += float(item.get("premium") or 0.0)
-
-        # Update position score to the max of its legs
-        if item.get("score_total", 0) > pos.get("score_total", 0):
-            pos["score_total"] = item["score_total"]
-
-        # If legs have different expirations or otm_pct, we keep the first/primary leg's meta at the top level
-        # usually multi-legs happen on the same ticker/time.
-        if len(pos["legs"]) == 1:
-            pos["exp"] = item.get("exp")
-            pos["dte"] = item.get("dte")
-            pos["otm_pct"] = item.get("otm_pct")
-
-    # If a position only has 1 leg, we can optionally flatten it back to a single alert.
-    # But for consistency, we'll keep it as a position with 1 leg if we want the UI
-    # to always look the same, OR flatten it if it's simpler.
-    # Let's flatten to avoid UI complexity for single leg trades.
-    final = []
-    for o in order:
-        if isinstance(o, dict) and o.get("type") == "position":
-            if len(o["legs"]) == 1:
-                final.append(o["legs"][0])
-            else:
-                final.append(o)
-        else:
-            final.append(o)
-
-    return final
 
 @APP.get("/alerts")
 async def alerts(
@@ -410,7 +341,7 @@ async def alerts(
     with db() as conn:
         rows = conn.execute(query, tuple(params)).fetchall()
         items = _format_alerts(rows, conn)
-        items = _group_alerts(items)
+
 
     return {"ok": True, "items": items}
 
@@ -463,7 +394,7 @@ async def sim_alerts(
     with db() as conn:
         rows = conn.execute(query, tuple(params)).fetchall()
         items = _format_alerts(rows, conn)
-        items = _group_alerts(items)
+
 
     return {"ok": True, "items": items}
 

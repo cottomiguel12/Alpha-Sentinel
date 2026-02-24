@@ -184,24 +184,22 @@ function ds(label, val) {
 
 function openDetailPopup(item) {
     _detailItem = item;
-    const isPosition = item.type === 'position';
-    const typeColor = isPosition ? 'var(--primary)' : (item.opt_type === 'C' ? '#34d399' : '#f87171');
-    const typeLabel = isPosition ? `${item.legs.length} LEGS` : (item.opt_type === 'C' ? 'CALL' : 'PUT');
+    const typeColor = item.opt_type === 'C' ? '#34d399' : '#f87171';
+    const typeLabel = item.opt_type === 'C' ? 'CALL' : 'PUT';
 
     // Header
     const titleHtml = `
         <span class="detail-ticker">${item.ticker}</span>
-        <span class="chip" style="background:${isPosition ? 'rgba(60,131,246,.15)' : (item.opt_type === 'C' ? 'rgba(52,211,153,.12)' : 'rgba(248,113,113,.12)')};
-              border-color:${isPosition ? 'rgba(60,131,246,.3)' : (item.opt_type === 'C' ? 'rgba(52,211,153,.3)' : 'rgba(248,113,113,.3)')};
+        <span class="chip" style="background:${item.opt_type === 'C' ? 'rgba(52,211,153,.12)' : 'rgba(248,113,113,.12)'};
+              border-color:${item.opt_type === 'C' ? 'rgba(52,211,153,.3)' : 'rgba(248,113,113,.3)'};
               color:${typeColor}">${typeLabel}</span>
-        ${!isPosition ? `<span style="font-size:16px;font-weight:700;color:${typeColor}">$${item.strike}</span>` : ''}
+        <span style="font-size:16px;font-weight:700;color:${typeColor}">$${item.strike}</span>
         ${item.score_total != null ? `<span class="chip ${scoreColor(item.score_total)}">${item.score_total.toFixed(1)}</span>` : ''}
     `;
     document.getElementById('detail-title').innerHTML = titleHtml;
 
-    // Stats grid
     const volOI = item.volume && item.oi ? (item.volume / item.oi).toFixed(1) + 'x' : '—';
-    const displayPremium = isPosition ? item.total_premium : item.premium;
+    const displayPremium = item.premium;
 
     let gridHtml =
         ds('Expiry', item.exp || '—') +
@@ -220,31 +218,7 @@ function openDetailPopup(item) {
 
     document.getElementById('detail-grid').innerHTML = gridHtml;
 
-    // Legs section for positions
-    if (isPosition) {
-        let legsHtml = '<div class="strategy-legs">';
-        legsHtml += '<h4 class="strategy-title"><span class="material-symbols-outlined" style="font-size:14px">account_tree</span> Strategy Legs</h4>';
-        legsHtml += '<div class="strategy-list">';
 
-        item.legs.forEach(leg => {
-            const legColor = leg.opt_type === 'C' ? 'text-emerald-400' : 'text-rose-400';
-            legsHtml += `
-                <div class="leg-card">
-                    <div style="flex:1">
-                        <div style="font-weight:700; color:#fff; font-size:13px">$${leg.strike} ${leg.opt_type} ${leg.exp}</div>
-                        <div style="font-size:11px; color:var(--muted); margin-top:2px">
-                            ${leg.size} @ ${formatCurrency(leg.premium)}
-                        </div>
-                    </div>
-                    <div style="text-align:right">
-                        <div class="chip ${scoreColor(leg.score_total)}" style="font-size:10px">${leg.score_total.toFixed(1)}</div>
-                    </div>
-                </div>
-            `;
-        });
-        legsHtml += '</div></div>';
-        document.getElementById('detail-grid').insertAdjacentHTML('afterend', legsHtml);
-    }
 
     // Tags
     const tags = (item.tags || '').split(',').filter(Boolean);
@@ -303,41 +277,34 @@ function closeDetailPopup() {
 
 // ── Alert card (mobile) ───────────────────────────────────────────────────────
 function renderAlertCard(item) {
-    const isPosition = item.type === 'position';
-    const typeColor = isPosition ? 'text-primary' : (item.opt_type === 'C' ? 'text-emerald-400' : 'text-rose-400');
-    const typeBg = isPosition ? 'bg-primary/10 border-primary/20 text-primary'
-        : (item.opt_type === 'C' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-            : 'bg-rose-500/10 border-rose-500/20 text-rose-400');
+    const typeColor = item.opt_type === 'C' ? 'text-emerald-400' : 'text-rose-400';
+    const typeBg = item.opt_type === 'C' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+        : 'bg-rose-500/10 border-rose-500/20 text-rose-400';
 
     const tags = (item.tags || '').split(',').filter(Boolean)
         .map(t => `<span class="chip chip-neutral">${t.trim()}</span>`).join('');
     const isAoi = !!item.is_aoi;
-
-    // Watchlist button only for single legs
-    const trackBtn = (!isPosition && isAoi)
+    const trackBtn = isAoi
         ? `<button class="btn-track btn-track-active" data-ck="${item.contract_key}" onclick="event.stopPropagation();toggleAOI('${item.contract_key}',1)" title="Remove from Watchlist">
                <span class="material-symbols-outlined">star</span>
            </button>`
-        : (!isPosition) ? `<button class="btn-track" data-ck="${item.contract_key}" onclick="event.stopPropagation();toggleAOI('${item.contract_key}',0)" title="Add to Watchlist">
+        : `<button class="btn-track" data-ck="${item.contract_key}" onclick="event.stopPropagation();toggleAOI('${item.contract_key}',0)" title="Add to Watchlist">
                <span class="material-symbols-outlined">star</span>
-           </button>` : '';
+           </button>`;
 
     const aoiChip = isAoi ? `<span class="chip chip-blue">AOI</span>` : '';
-    const posChip = isPosition ? `<span class="chip bg-primary/20 border-primary/30 text-primary">${item.legs.length} LEGS</span>` : '';
 
-    const el = document.createElement('div');
     el.className = 'alert-card has-detail';
-    if (isPosition) el.style.borderLeft = '3px solid var(--primary)';
     if (item.score_total >= 90) el.classList.add('alert-card-hot');
 
-    const displayContract = isPosition ? 'Position / Spread' : `$${item.strike}${item.opt_type}`;
-    const displayPremium = isPosition ? item.total_premium : item.premium;
+    const displayContract = `$${item.strike}${item.opt_type}`;
+    const displayPremium = item.premium;
 
     el.innerHTML = `
         <div class="alert-card-header">
             <div class="alert-card-contract">
                 <span class="alert-ticker">${item.ticker}</span>
-                ${isPosition ? posChip : `<span class="chip ${typeBg}">${item.opt_type === 'C' ? 'CALL' : 'PUT'}</span>`}
+                <span class="chip ${typeBg}">${item.opt_type === 'C' ? 'CALL' : 'PUT'}</span>
                 <span class="alert-strike ${typeColor}">${displayContract}</span>
                 ${aoiChip}
             </div>
@@ -356,7 +323,7 @@ function renderAlertCard(item) {
         <div class="alert-card-row1">
             <div class="stat-cell">
                 <span class="stat-label">Premium</span>
-                <span class="stat-val ${isPosition ? 'text-primary' : ''}">${formatCurrency(displayPremium)}</span>
+                <span class="stat-val">${formatCurrency(displayPremium)}</span>
             </div>
             <div class="stat-cell">
                 <span class="stat-label">Size</span>
@@ -382,7 +349,7 @@ function renderAlertCard(item) {
             </div>
         </div>
         ${tags ? `<div class="alert-card-tags">${tags}</div>` : ''}
-        <div style="font-size:10px;color:var(--muted);text-align:right;margin-top:2px">${isPosition ? 'Tap to see all legs →' : 'Tap for details →'}</div>
+        <div style="font-size:10px;color:var(--muted);text-align:right;margin-top:2px">Tap for details →</div>
     `;
     el.addEventListener('click', () => openDetailPopup(item));
     return el;
@@ -390,8 +357,7 @@ function renderAlertCard(item) {
 
 // ── Alert row (desktop table) ─────────────────────────────────────────────────
 function renderAlertRow(item) {
-    const isPosition = item.type === 'position';
-    const typeColor = isPosition ? 'text-primary' : (item.opt_type === 'C' ? 'text-emerald-400' : 'text-rose-400');
+    const typeColor = item.opt_type === 'C' ? 'text-emerald-400' : 'text-rose-400';
     const isAoi = !!item.is_aoi;
     const tags = (item.tags || '').split(',').filter(Boolean)
         .map(t => `<span class="chip chip-neutral">${t.trim()}</span>`).join('');
@@ -399,11 +365,10 @@ function renderAlertRow(item) {
 
     const tr = document.createElement('tr');
     tr.className = 'tbl-row has-detail';
-    if (isPosition) tr.style.borderLeft = '3px solid var(--primary)';
     if (item.score_total >= 90) tr.classList.add('bg-primary/5');
 
-    const displayContract = isPosition ? `<span class="opacity-60 text-xs">${item.legs.length} LEGS</span> Position` : `$${item.strike}${item.opt_type} ${item.exp}`;
-    const displayPremium = isPosition ? item.total_premium : item.premium;
+    const displayContract = `$${item.strike}${item.opt_type} ${item.exp}`;
+    const displayPremium = item.premium;
 
     tr.innerHTML = `
         <td class="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">
@@ -412,7 +377,7 @@ function renderAlertRow(item) {
         </td>
         <td class="px-4 py-3 text-sm font-bold text-white tracking-wide">${item.ticker}${aoiChip}</td>
         <td class="px-4 py-3 text-sm font-medium ${typeColor} whitespace-nowrap">${displayContract}</td>
-        <td class="px-4 py-3 text-sm font-bold ${isPosition ? 'text-primary' : 'text-white'} text-right">${formatCurrency(displayPremium)}</td>
+        <td class="px-4 py-3 text-sm font-bold text-white text-right">${formatCurrency(displayPremium)}</td>
         <td class="px-4 py-3 text-sm text-slate-300 text-right">${item.size || '—'}</td>
         <td class="px-4 py-3 text-sm text-slate-300 text-right">${item.volume && item.oi ? (item.volume / item.oi).toFixed(1) + 'x' : '—'}</td>
         <td class="px-4 py-3 text-sm text-slate-300 text-right">${formatPercent(item.spread_pct)}</td>
@@ -422,11 +387,10 @@ function renderAlertRow(item) {
         </td>
         <td class="px-4 py-3"><div class="flex gap-1 flex-wrap max-w-[140px]">${tags}</div></td>
         <td class="px-4 py-3 text-right">
-            ${(!isPosition) ? `
             <button class="btn-track ${isAoi ? 'btn-track-active' : ''}" data-ck="${item.contract_key}"
                 onclick="event.stopPropagation();toggleAOI('${item.contract_key}',${isAoi ? 1 : 0})" title="${isAoi ? 'Remove' : 'Watch'}">
                 <span class="material-symbols-outlined">star</span>
-            </button>` : ''}
+            </button>
         </td>
     `;
     tr.addEventListener('click', () => openDetailPopup(item));

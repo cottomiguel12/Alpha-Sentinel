@@ -32,7 +32,7 @@ services:
     environment:
       DB_PATH: /data/sentinel.db
       LOG_PATH: /logs/agent.log
-      OPTIONS_CSVS: "/data/etfs.csv,/data/stocks.csv"
+      OPTIONS_CSVS: "/data/new_etfs.csv,/data/new_stocks.csv"
       # OPTIONS_CSV: ""  # legacy single-file fallback (leave blank when OPTIONS_CSVS is set)
       AGENT_INTERVAL_SEC: "1.5"
       MAX_ALERTS_PER_TICK: "25"
