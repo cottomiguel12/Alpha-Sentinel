@@ -178,18 +178,18 @@ def iter_sim():
             trade_time_raw = d.get("trade_time_raw", "")
             trade_ts = d.get("ts", now_ts)
             
-            # Generate a unique trade_id for every alert to prevent any grouping
-            import hashlib
-            # Include contract details and price/size to ensure uniqueness even in the same second
-            raw_id_str = f"{ticker}_{trade_time_raw}_{trade_ts}_{ck}_{d.get('size')}_{d.get('premium')}"
-            trade_id = hashlib.md5(raw_id_str.encode()).hexdigest()
-
             ck = d.get("contract_key")
             if not ck:
                 ck = normalize_contract_key(
                     ticker, d.get("exp", ""),
                     d.get("strike", 0.0), d.get("opt_type", "")
                 )
+
+            # Generate a unique trade_id for every alert to prevent any grouping
+            import hashlib
+            # Include contract details and price/size to ensure uniqueness even in the same second
+            raw_id_str = f"{ticker}_{trade_time_raw}_{trade_ts}_{ck}_{d.get('size')}_{d.get('premium')}"
+            trade_id = hashlib.md5(raw_id_str.encode()).hexdigest()
 
             ingested_at = now_ts
             trade_tz = d.get("trade_tz", "UTC")
