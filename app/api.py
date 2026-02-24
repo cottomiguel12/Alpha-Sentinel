@@ -750,6 +750,7 @@ async def start_sim(body: Optional[SimSettingsIn] = None, user=Depends(require_r
     with db() as conn:
         # User requested that "Start" always resets the stream to avoid duplicates/carry-over
         conn.execute("DELETE FROM alerts_live")
+        conn.execute("DELETE FROM raw_sim_alerts")
         conn.execute("UPDATE sim_state SET cursor_id=1, last_tick_ts=NULL WHERE id=1")
 
         if body:
@@ -799,9 +800,10 @@ async def stop_sim(user=Depends(require_role("sentinel"))):
 async def reset_sim(user=Depends(require_role("sentinel"))):
     with db() as conn:
         conn.execute("DELETE FROM alerts_live")
+        conn.execute("DELETE FROM raw_sim_alerts")
         # Reset cursor, clear hash, and STOP the engine
         conn.execute("UPDATE sim_state SET cursor_id=1, last_tick_ts=NULL, dataset_hash=NULL, is_running=0, is_paused=0 WHERE id=1")
-    return {"ok": True, "message": "Simulation halted, data cleared and cursor reset"}
+    return {"ok": True, "message": "Simulation halted, all data (live & raw) cleared and cursor reset"}
 
 
 @APP.get("/sim/filter_stats")

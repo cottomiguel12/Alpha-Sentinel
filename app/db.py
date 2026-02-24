@@ -292,3 +292,10 @@ def init_db():
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN trade_time_raw TEXT")
             if "trade_tz" not in existing_cols:
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN trade_tz TEXT")
+            if "trade_id" not in existing_cols:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN trade_id TEXT")
+
+        # Migrate raw_sim_alerts specifically if it exists
+        existing_raw_cols = {r["name"] for r in conn.execute("PRAGMA table_info(raw_sim_alerts)").fetchall()}
+        if "trade_id" not in existing_raw_cols and "id" in existing_raw_cols:
+            conn.execute("ALTER TABLE raw_sim_alerts ADD COLUMN trade_id TEXT")

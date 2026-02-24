@@ -659,7 +659,16 @@ class SentinelAgent:
                     
                     # Generate a stable trade_id for multi-leg grouping
                     import hashlib
-                    raw_id_str = f"{a.ticker}_{a.trade_time_raw}_{a.ts}"
+                    # Determine if this is a Multi-Leg trade (Look for "ML" in tags or reason_codes)
+                    is_multi = "ML" in str(a.tags).upper() or "ML" in str(a.reason_codes).upper()
+                    
+                    if is_multi:
+                        # Grouping key for multi-leg: same ticker at the exact same second
+                        raw_id_str = f"{a.ticker}_{a.trade_time_raw}_{a.ts}"
+                    else:
+                        # Unique identifier for single-leg: include contract and size details to avoid clashing with other trades in same second
+                        raw_id_str = f"{a.ticker}_{a.trade_time_raw}_{a.ts}_{a.contract_key}_{a.size}_{a.premium}"
+                    
                     trade_id = hashlib.md5(raw_id_str.encode()).hexdigest()
 
                     if has_ck and has_source and has_ingest:
