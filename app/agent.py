@@ -654,7 +654,7 @@ class SentinelAgent:
 
             for a in alerts:
                 try:
-                    target_table = "raw_sim_alerts" if str(a.source).lower() == "archive" else "alerts"
+                    target_table = "raw_sim_alerts" if str(a.source).upper().startswith("CSV") else "alerts"
                     ck = _normalize_contract_key(a.contract_key)
                     if has_ck and has_source and has_ingest:
                         conn.execute(
