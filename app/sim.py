@@ -178,23 +178,11 @@ def iter_sim():
             trade_time_raw = d.get("trade_time_raw", "")
             trade_ts = d.get("ts", now_ts)
             
-            # Generate or reuse a stable trade_id for multi-leg grouping
-            trade_id = d.get("trade_id")
-            if not trade_id:
-                import hashlib
-                # determine if multi-leg (look for "ML" in tags or reason_codes)
-                tags_str = str(d.get("tags", "")).upper()
-                rc_str = str(d.get("reason_codes", "")).upper()
-                is_multi = "ML" in tags_str or "ML" in rc_str
-                
-                if is_multi:
-                    # Shared key for real legs
-                    raw_id_str = f"{ticker}_{trade_time_raw}_{trade_ts}"
-                else:
-                    # Unique key for single legs
-                    raw_id_str = f"{ticker}_{trade_time_raw}_{trade_ts}_{d.get('contract_key')}_{d.get('size')}_{d.get('premium')}"
-                
-                trade_id = hashlib.md5(raw_id_str.encode()).hexdigest()
+            # Generate a unique trade_id for every alert to prevent any grouping
+            import hashlib
+            # Include contract details and price/size to ensure uniqueness even in the same second
+            raw_id_str = f"{ticker}_{trade_time_raw}_{trade_ts}_{ck}_{d.get('size')}_{d.get('premium')}"
+            trade_id = hashlib.md5(raw_id_str.encode()).hexdigest()
 
             ck = d.get("contract_key")
             if not ck:
