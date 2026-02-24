@@ -230,11 +230,9 @@ function openDetailPopup(item) {
         ? tags.map(t => `<span class="chip chip-neutral">${t.trim()}</span>`).join('')
         : '';
 
-    // CTA button (hide for Multi-leg summary)
+    // CTA button
     const cta = document.getElementById('detail-cta');
-    if (isPosition) {
-        cta.style.display = 'none';
-    } else {
+    if (cta) {
         cta.style.display = 'block';
         _refreshDetailCta(!!item.is_aoi);
     }
@@ -430,11 +428,12 @@ async function loadAlerts(isBackground = false) {
     if (currentTypeFilter) params.append('type', currentTypeFilter);
     if (currentSortScore) params.append('sort_score', currentSortScore);
 
-    const isLive = location.pathname.includes('index.html') || location.pathname === '/' || location.pathname === '';
-    const isSim = location.pathname.includes('simulation');
+    const isSim = path.includes('simulation');
     const endpoint = isSim ? '/sim/alerts' : '/alerts';
 
-    if (isLive && !isSim) {
+    console.log(`[DASH] path=${path} isSim=${isSim} endpoint=${endpoint}`);
+
+    if (isMainPage && !isSim) {
         const uw = await fetchApi('/uw/status');
         if (uw && !uw.enabled) {
             if (cardsWrap) cardsWrap.innerHTML = '<div style="margin:20px;text-align:center;padding:24px;border:1px dashed #3c83f6;border-radius:12px;"><h3 style="color:#3c83f6;margin-bottom:8px;font-weight:600">UW Alerts — Coming Soon</h3><p style="color:#64748b;font-size:14px">API key not configured</p></div>';
@@ -450,6 +449,7 @@ async function loadAlerts(isBackground = false) {
     }
 
     totalAlerts = data.total || 0;
+    console.log(`[DASH] Received ${data.items ? data.items.length : 0} items. Total=${totalAlerts}`);
     updatePaginationUI();
 
     // Cards (mobile)
